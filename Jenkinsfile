@@ -1,10 +1,13 @@
 // ACEest Fitness & Gym - Jenkins pipeline
 //
 //   every branch  : lint, unit tests, image build, tests inside the image
-//   main          : + SonarQube analysis / quality gate, publish build image
+//   main          : + SonarQube analysis / quality gate, publish build image,
+//                   then release to Kubernetes through all five strategies
 //   tag vX.Y.Z    : + publish the release image X.Y.Z
 //
 // Each build archives versioned artifacts (wheel, source tarball, release.json).
+// Every strategy script verifies its rollout and reverts on its own if the new
+// version fails (see scripts/deploy-*.sh); Jenkinsfile.rollback is the manual way back.
 
 pipeline {
     agent any
@@ -19,6 +22,13 @@ pipeline {
     triggers {
         // Jenkins runs on a laptop that GitHub cannot reach, so it polls instead of using a webhook
         pollSCM('H/2 * * * *')
+    }
+
+    parameters {
+        string(name: 'STRATEGIES', defaultValue: 'rolling,blue-green,canary,ab-testing,shadow',
+               description: 'Release strategies to run for a main build (comma separated)')
+        choice(name: 'FAULT_INJECTION', choices: ['none', 'unhealthy', 'errors'],
+               description: 'Rollback drill: start the new pods with a fault and let the pipeline revert them')
     }
 
     environment {
@@ -166,11 +176,43 @@ print('runtime image OK:', body)
                 }
             }
         }
+
+        stage('Deploy to Kubernetes') {
+            when { branch 'main' }
+            environment {
+                IMAGE = "${env.IMAGE_REPO}:${env.IMAGE_TAG}"
+                TEST_IMAGE = "aceest-fitness-test:${env.IMAGE_TAG}"
+                INGRESS = "${env.ACEEST_INGRESS ?: 'http://192.168.89.2'}"
+                DOCKER_NETWORK = "${env.ACEEST_DOCKER_NETWORK ?: 'aceest-net'}"
+            }
+            parallel {
+                stage('Rolling Update') {
+                    when { expression { wanted('rolling') } }
+                    steps { release('rolling') }
+                }
+                stage('Blue-Green') {
+                    when { expression { wanted('blue-green') } }
+                    steps { release('blue-green') }
+                }
+                stage('Canary') {
+                    when { expression { wanted('canary') } }
+                    steps { release('canary') }
+                }
+                stage('A/B Testing') {
+                    when { expression { wanted('ab-testing') } }
+                    steps { release('ab-testing') }
+                }
+                stage('Shadow') {
+                    when { expression { wanted('shadow') } }
+                    steps { release('shadow') }
+                }
+            }
+        }
     }
 
     post {
         always {
-            archiveArtifacts artifacts: 'reports/*.xml', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'reports/*', allowEmptyArchive: true
         }
         success {
             echo "v${env.APP_VERSION} (${env.GIT_SHORT}) passed every stage"
@@ -181,6 +223,20 @@ print('runtime image OK:', body)
         cleanup {
             sh 'docker rmi "aceest-fitness-test:$IMAGE_TAG" >/dev/null 2>&1 || true'
             cleanWs()
+        }
+    }
+}
+
+boolean wanted(String strategy) {
+    def selected = (params.STRATEGIES ?: 'rolling,blue-green,canary,ab-testing,shadow').split(',').collect { it.trim() }
+    return selected.contains(strategy)
+}
+
+void release(String strategy) {
+    def fault = params.FAULT_INJECTION ?: 'none'
+    withCredentials([file(credentialsId: 'kubeconfig-aceest', variable: 'KUBECONFIG')]) {
+        withEnv(["FAULT=${fault == 'none' ? '' : fault}", "BUILD_LABEL=jenkins #${env.BUILD_NUMBER}"]) {
+            sh "scripts/deploy-${strategy}.sh"
         }
     }
 }

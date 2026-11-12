@@ -1,0 +1,48 @@
+# One namespace per release strategy so each one can be demonstrated (and
+# rolled back) without touching the others.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aceest-rolling
+  labels:
+    app.kubernetes.io/part-of: aceest-fitness
+    aceest.io/strategy: rolling-update
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aceest-bluegreen
+  labels:
+    app.kubernetes.io/part-of: aceest-fitness
+    aceest.io/strategy: blue-green
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aceest-canary
+  labels:
+    app.kubernetes.io/part-of: aceest-fitness
+    aceest.io/strategy: canary
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aceest-ab
+  labels:
+    app.kubernetes.io/part-of: aceest-fitness
+    aceest.io/strategy: ab-testing
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aceest-shadow
+  labels:
+    app.kubernetes.io/part-of: aceest-fitness
+    aceest.io/strategy: shadow
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aceest-ci
+  labels:
+    app.kubernetes.io/part-of: aceest-fitness
