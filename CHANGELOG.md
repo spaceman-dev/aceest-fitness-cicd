@@ -3,6 +3,16 @@
 Versions follow the numbering of the original ACEest desktop builds
 (`Aceestver-X.Y.Z.py`); each one is ported to the Flask app and tagged `vX.Y.Z`.
 
+## 1.1.2
+
+- Client roster: saved clients are listed on the dashboard with their coach
+  notes, plus an adherence bar chart per client.
+- CSV export (`/api/clients/export.csv`) with the desktop build's columns;
+  formula-like text is quoted so spreadsheets don't execute it.
+- `GET/POST /api/clients`.
+- Fixed: a second client with the same name was silently added (now 409).
+- Pipeline: each build uses its own test image tag.
+
 ## 1.1.0
 
 - Client profile form (name, age, weight, program, weekly adherence) with the
