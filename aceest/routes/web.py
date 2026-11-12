@@ -11,6 +11,7 @@ from ..errors import ACEestError, NotFoundError
 from ..programs import SITE_METRICS, WORKOUT_TYPES, get_program, list_programs
 from ..services import (
     build_profile,
+    capacity_used_pct,
     current_week,
     describe_client,
     summarise_adherence,
@@ -26,11 +27,13 @@ web_bp = Blueprint("web", __name__)
 def _dashboard(**context: Any) -> str:
     context.setdefault("selected", None)
     context.setdefault("form", {})
+    clients = [describe_client(client) for client in db.list_clients()]
     return render_template(
         "dashboard.html",
         programs=list_programs(),
         metrics=SITE_METRICS,
-        clients=[describe_client(client) for client in db.list_clients()],
+        clients=clients,
+        capacity_pct=capacity_used_pct(len(clients)),
         **context,
     )
 
