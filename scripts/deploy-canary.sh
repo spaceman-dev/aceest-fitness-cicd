@@ -8,7 +8,7 @@ STRATEGY=canary
 NAMESPACE=aceest-canary
 HOST=canary.aceest.localhost
 CANARY_STEPS=${CANARY_STEPS:-"10 30 60"}
-CANARY_SAMPLES=${CANARY_SAMPLES:-50}
+CANARY_SAMPLES=${CANARY_SAMPLES:-100}
 source "$(dirname "$0")/lib.sh"
 require_release
 
