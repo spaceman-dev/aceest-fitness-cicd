@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}{{ client.name }} &middot; ACEest Fitness{% endblock %}
+
+{% block content %}
+<section class="split">
+  <div class="card">
+    <h2>Client Summary</h2>
+    <pre class="summary-block">CLIENT PROFILE
+--------------
+Name     : {{ client.name }}
+Age      : {{ client.age }}
+Weight   : {{ client.weight_kg }} kg
+Program  : {{ program.name if program else client.program }}
+Calories : {{ client.calories }} kcal/day</pre>
+    {% if client.notes %}
+      <p class="muted">Coach notes: {{ client.notes }}</p>
+    {% endif %}
+    <p><a class="button-link" href="{{ url_for('web.dashboard') }}">&larr; Back to dashboard</a></p>
+  </div>
+
+  <div class="card">
+    <h2>Save Weekly Progress</h2>
+    <form method="post" action="{{ url_for('web.save_progress', name=client.name) }}" class="stack">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label>Week
+        <input type="text" name="week" value="{{ week }}" required>
+      </label>
+      <label>Adherence (%)
+        <input type="number" name="adherence" min="0" max="100" value="80" required>
+      </label>
+      <button type="submit">Save Progress</button>
+    </form>
+  </div>
+</section>
+
+<section class="card">
+  <h2>Weekly progress</h2>
+  {% if progress %}
+    <table class="roster">
+      <thead><tr><th>Week</th><th>Adherence</th><th>Logged</th></tr></thead>
+      <tbody>
+        {% for entry in progress %}
+          <tr><td>{{ entry.week }}</td><td>{{ entry.adherence }}%</td><td>{{ entry.logged_at }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="empty">No progress logged yet.</p>
+  {% endif %}
+</section>
+{% endblock %}

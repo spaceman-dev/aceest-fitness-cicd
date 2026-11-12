@@ -129,3 +129,4 @@ table.roster a { color: var(--gold); text-decoration: none; }
 .actions { display: flex; gap: 0.75rem; align-items: center; }
 .button-link { color: var(--gold); text-decoration: none; font-weight: 600; }
 .calories { font-size: 1.1rem; font-weight: 700; color: var(--gold); margin: 0 0 1.5rem; }
+.summary-block { background: var(--surface-2); padding: 0.9rem 1rem; border-radius: 6px; font-size: 0.85rem; }

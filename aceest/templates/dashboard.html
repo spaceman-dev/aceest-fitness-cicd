@@ -43,8 +43,8 @@ BREAK-EVEN: {{ metrics.break_even_members }} Members</pre>
   <div>
     {% if error %}
       <p class="flash flash-error">{{ error }}</p>
-    {% elif profile %}
-      <p class="flash flash-success">Client {{ profile.name }} saved successfully. Adherence: {{ profile.adherence }}%</p>
+    {% elif message %}
+      <p class="flash flash-success">{{ message }} &middot; <a href="{{ url_for('web.client_detail', name=profile.name) }}">open client</a></p>
     {% endif %}
     <div class="card">
       <h2>Weekly Training Plan</h2>
@@ -77,7 +77,7 @@ BREAK-EVEN: {{ metrics.break_even_members }} Members</pre>
         <tbody>
           {% for client in clients %}
             <tr>
-              <td>{{ client.name }}</td>
+              <td><a href="{{ url_for('web.client_detail', name=client.name) }}">{{ client.name }}</a></td>
               <td>{{ client.age }}</td>
               <td>{{ client.weight_kg }}</td>
               <td>{{ client.program }}</td>

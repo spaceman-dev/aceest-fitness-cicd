@@ -45,10 +45,12 @@ LABEL org.opencontainers.image.title="aceest-fitness" \
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/opt/venv/bin:$PATH" \
-    FLASK_ENV=production
+    FLASK_ENV=production \
+    ACEEST_DB=/data/aceest.db
 
 RUN groupadd --gid 10001 aceest \
-    && useradd --uid 10001 --gid aceest --no-create-home --shell /usr/sbin/nologin aceest
+    && useradd --uid 10001 --gid aceest --no-create-home --shell /usr/sbin/nologin aceest \
+    && mkdir -p /data && chown 10001:10001 /data
 
 COPY --from=builder /opt/venv /opt/venv
 
@@ -56,6 +58,9 @@ WORKDIR /app
 # code stays root-owned and read-only for the app user
 COPY ACEest_Fitness.py ./
 COPY aceest ./aceest
+
+# the only writable path: SQLite lives here (a volume in Kubernetes)
+VOLUME ["/data"]
 
 # numeric so Kubernetes can verify runAsNonRoot
 USER 10001
