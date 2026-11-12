@@ -80,7 +80,7 @@ URL through the ingress (port 8088 on the host):
 
 | Strategy | URL | Release | Rollback |
 | --- | --- | --- | --- |
-| Rolling update | http://rolling.aceest.localhost:8088 | pods replaced one at a time, never below 3 ready | `kubectl rollout undo` |
+| Rolling update | http://rolling.aceest.localhost:8088 | pods replaced one at a time, never below 3 ready | undo to the last revision that did not fail |
 | Blue-green | http://bluegreen.aceest.localhost:8088 | idle slot tested on `preview.bluegreen...`, then the live Service selector flips | flip the selector back |
 | Canary | http://canary.aceest.localhost:8088 | 10% -> 30% -> 60% of requests, checked at every step, then promoted | weight back to 0 |
 | A/B testing | http://ab.aceest.localhost:8088 | variant B only for `X-Variant: B` or cookie `ab_variant_b=always` | remove B's route |

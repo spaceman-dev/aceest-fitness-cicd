@@ -16,6 +16,10 @@ apply_template "$K8S_DIR/rolling/deployment.yaml"
 
 if ! rollout_ok aceest || ! old_pods_gone app=aceest || ! smoke "$HOST"; then
   if [ -n "$previous" ]; then
+    # mark the failed revision so a later manual rollback never picks it
+    for rs in $(current_rs aceest); do
+      kc annotate rs "$rs" aceest/failed="${BUILD_LABEL:-manual}" --overwrite >/dev/null || true
+    done
     log "rolling back to the previous revision ($previous)"
     kc rollout undo deployment/aceest
     rollout_ok aceest
@@ -24,5 +28,9 @@ if ! rollout_ok aceest || ! old_pods_gone app=aceest || ! smoke "$HOST"; then
   fail "$APP_VERSION was not released"
 fi
 
+# a re-released template reuses its old ReplicaSet; drop any earlier failure mark
+for rs in $(current_rs aceest); do
+  kc annotate rs "$rs" aceest/failed- >/dev/null 2>&1 || true
+done
 kc rollout history deployment/aceest | tail -n 5
 log "done: $APP_VERSION is live on http://$HOST"
