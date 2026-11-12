@@ -12,7 +12,7 @@ from werkzeug.exceptions import HTTPException
 from .config import get_config
 from .errors import ACEestError
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
 
 csrf = CSRFProtect()
 
