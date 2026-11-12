@@ -7,17 +7,20 @@ import pytest
 from aceest.programs import PROGRAMS, SITE_METRICS, get_program, list_programs
 
 
-def test_catalogue_has_the_three_launch_programs():
-    assert set(PROGRAMS) == {"FL", "MG", "BG"}
-    assert [p["code"] for p in list_programs()] == ["FL", "MG", "BG"]
+def test_catalogue_has_the_four_programs_of_2_2_4():
+    assert [p["code"] for p in list_programs()] == ["FL3", "FL5", "MG", "BG"]
 
 
-@pytest.mark.parametrize(("code", "factor"), [("FL", 22), ("MG", 35), ("BG", 26)])
+@pytest.mark.parametrize(("code", "factor"), [("FL3", 22), ("FL5", 24), ("MG", 35), ("BG", 26)])
 def test_calorie_factors(code, factor):
     assert PROGRAMS[code]["calorie_factor"] == factor
 
 
-@pytest.mark.parametrize("code", ["FL", "MG", "BG"])
+def test_old_fat_loss_code_still_resolves():
+    assert get_program("fl")["code"] == "FL3"
+
+
+@pytest.mark.parametrize("code", ["FL3", "FL5", "MG", "BG"])
 def test_every_program_has_a_plan_and_a_colour(code):
     program = PROGRAMS[code]
     assert program["workout"].strip()

@@ -24,14 +24,14 @@ def test_every_response_carries_release_headers(client):
 
 def test_programs_listing(client):
     body = client.get("/api/programs").get_json()
-    assert body["count"] == 3
-    assert {p["code"] for p in body["programs"]} == {"FL", "MG", "BG"}
+    assert body["count"] == 4
+    assert {p["code"] for p in body["programs"]} == {"FL3", "FL5", "MG", "BG"}
 
 
 def test_program_detail_is_case_insensitive(client):
     response = client.get("/api/programs/mg")
     assert response.status_code == 200
-    assert response.get_json()["name"] == "Muscle Gain (MG)"
+    assert response.get_json()["name"] == "Muscle Gain (MG) - PPL"
 
 
 def test_unknown_program_is_a_json_404(client):
@@ -54,7 +54,7 @@ def test_calorie_estimate(client):
     response = client.post("/api/calories", json={"weight_kg": 80, "program": "mg"})
     assert response.status_code == 200
     assert response.get_json() == {
-        "weight_kg": 80.0, "program": "MG", "program_name": "Muscle Gain (MG)",
+        "weight_kg": 80.0, "program": "MG", "program_name": "Muscle Gain (MG) - PPL",
         "factor": 35, "calories": 2800,
     }
 
@@ -80,7 +80,7 @@ def test_non_json_body_is_rejected(client):
 def test_profile_endpoint(client, profile_payload):
     body = client.post("/api/profile", json=profile_payload).get_json()
     assert body["calories"] == 2800
-    assert body["program_name"] == "Muscle Gain (MG)"
+    assert body["program_name"] == "Muscle Gain (MG) - PPL"
     assert body["adherence"] == 85
 
 
@@ -91,3 +91,14 @@ def test_profile_endpoint_reports_the_failing_field(client, profile_payload):
     assert response.get_json() == {
         "error": "ValidationError", "message": "'age' must be between 10 and 100", "field": "age",
     }
+
+
+def test_bmi_report(client):
+    body = client.post("/api/bmi", json={"weight_kg": 80, "height_cm": 180}).get_json()
+    assert body == {"bmi": 24.7, "category": "Normal", "risk": "Low risk if active and strong."}
+
+
+def test_bmi_needs_height(client):
+    response = client.post("/api/bmi", json={"weight_kg": 80})
+    assert response.status_code == 400
+    assert response.get_json()["field"] == "height_cm"

@@ -45,6 +45,44 @@ MIGRATIONS: list[tuple[int, list[str]]] = [
         """,
         "CREATE UNIQUE INDEX IF NOT EXISTS progress_client_week ON progress (client_id, week)",
     ]),
+    (3, [
+        # 2.2.4: height and goals, the FL3/FL5 split, workouts and body metrics.
+        # Only additive changes, so a 2.2.1 replica still runs against this schema.
+        "ALTER TABLE clients ADD COLUMN height_cm REAL",
+        "ALTER TABLE clients ADD COLUMN target_weight_kg REAL",
+        "ALTER TABLE clients ADD COLUMN target_adherence INTEGER",
+        "UPDATE clients SET program = 'FL3' WHERE program = 'FL'",
+        """
+        CREATE TABLE IF NOT EXISTS workouts (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id    INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+            date         TEXT    NOT NULL,
+            workout_type TEXT    NOT NULL,
+            duration_min INTEGER NOT NULL,
+            notes        TEXT    NOT NULL DEFAULT ''
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS exercises (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            workout_id INTEGER NOT NULL REFERENCES workouts(id) ON DELETE CASCADE,
+            name       TEXT    NOT NULL,
+            sets       INTEGER NOT NULL,
+            reps       INTEGER NOT NULL,
+            weight_kg  REAL    NOT NULL DEFAULT 0
+        )
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS metrics (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id   INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+            date        TEXT    NOT NULL,
+            weight_kg   REAL,
+            waist_cm    REAL,
+            bodyfat_pct REAL
+        )
+        """,
+    ]),
 ]
 
 
@@ -124,15 +162,23 @@ def find_client(name: str) -> dict[str, Any] | None:
     return _one("SELECT * FROM clients WHERE name = ?", (name,))
 
 
+CLIENT_FIELDS = ("name", "age", "height_cm", "weight_kg", "program", "calories", "adherence",
+                 "notes", "target_weight_kg", "target_adherence")
+
+
+def _client_values(profile: Mapping[str, Any]) -> tuple[Any, ...]:
+    return tuple(profile.get(field) for field in CLIENT_FIELDS)
+
+
 def insert_client(profile: Mapping[str, Any]) -> dict[str, Any]:
     db = get_db()
     cursor = db.execute(
         """
-        INSERT INTO clients (name, age, weight_kg, program, calories, adherence, notes)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO clients (name, age, height_cm, weight_kg, program, calories, adherence,
+                             notes, target_weight_kg, target_adherence)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        (profile["name"], profile["age"], profile["weight_kg"], profile["program"],
-         profile["calories"], profile["adherence"], profile["notes"]),
+        _client_values(profile),
     )
     db.commit()
     return _one("SELECT * FROM clients WHERE id = ?", (cursor.lastrowid,))
@@ -143,12 +189,11 @@ def update_client(client_id: int, profile: Mapping[str, Any]) -> dict[str, Any]:
     db.execute(
         """
         UPDATE clients
-           SET name = ?, age = ?, weight_kg = ?, program = ?, calories = ?,
-               adherence = ?, notes = ?
+           SET name = ?, age = ?, height_cm = ?, weight_kg = ?, program = ?, calories = ?,
+               adherence = ?, notes = ?, target_weight_kg = ?, target_adherence = ?
          WHERE id = ?
         """,
-        (profile["name"], profile["age"], profile["weight_kg"], profile["program"],
-         profile["calories"], profile["adherence"], profile["notes"], client_id),
+        (*_client_values(profile), client_id),
     )
     db.commit()
     return _one("SELECT * FROM clients WHERE id = ?", (client_id,))
@@ -174,3 +219,56 @@ def save_progress(client_id: int, week: str, adherence: int) -> dict[str, Any]:
 
 def list_progress(client_id: int) -> list[dict[str, Any]]:
     return _all("SELECT * FROM progress WHERE client_id = ? ORDER BY week", (client_id,))
+
+
+# ----------------------------------------------------------------- workouts
+
+
+def insert_workout(client_id: int, workout: Mapping[str, Any]) -> dict[str, Any]:
+    """Store a session and its exercises in one transaction."""
+    db = get_db()
+    with db:
+        cursor = db.execute(
+            "INSERT INTO workouts (client_id, date, workout_type, duration_min, notes) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (client_id, workout["date"], workout["workout_type"], workout["duration_min"],
+             workout["notes"]),
+        )
+        workout_id = cursor.lastrowid
+        db.executemany(
+            "INSERT INTO exercises (workout_id, name, sets, reps, weight_kg) "
+            "VALUES (?, ?, ?, ?, ?)",
+            [(workout_id, e["name"], e["sets"], e["reps"], e["weight_kg"])
+             for e in workout["exercises"]],
+        )
+    saved = _one("SELECT * FROM workouts WHERE id = ?", (workout_id,))
+    saved["exercises"] = _all("SELECT name, sets, reps, weight_kg FROM exercises "
+                              "WHERE workout_id = ? ORDER BY id", (workout_id,))
+    return saved
+
+
+def list_workouts(client_id: int) -> list[dict[str, Any]]:
+    workouts = _all("SELECT * FROM workouts WHERE client_id = ? ORDER BY date DESC, id DESC",
+                    (client_id,))
+    for workout in workouts:
+        workout["exercises"] = _all("SELECT name, sets, reps, weight_kg FROM exercises "
+                                    "WHERE workout_id = ? ORDER BY id", (workout["id"],))
+    return workouts
+
+
+# ------------------------------------------------------------------ metrics
+
+
+def insert_metrics(client_id: int, entry: Mapping[str, Any]) -> dict[str, Any]:
+    db = get_db()
+    cursor = db.execute(
+        "INSERT INTO metrics (client_id, date, weight_kg, waist_cm, bodyfat_pct) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (client_id, entry["date"], entry["weight_kg"], entry["waist_cm"], entry["bodyfat_pct"]),
+    )
+    db.commit()
+    return _one("SELECT * FROM metrics WHERE id = ?", (cursor.lastrowid,))
+
+
+def list_metrics(client_id: int) -> list[dict[str, Any]]:
+    return _all("SELECT * FROM metrics WHERE client_id = ? ORDER BY date, id", (client_id,))

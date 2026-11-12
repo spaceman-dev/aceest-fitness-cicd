@@ -89,3 +89,9 @@ def test_client_listing_answers():
     status, text = call("/api/clients")
     assert status == 200
     assert "count" in json.loads(text)
+
+
+def test_bmi_band():
+    status, text = call("/api/bmi", {"weight_kg": 80, "height_cm": 180})
+    assert status == 200
+    assert json.loads(text)["category"] == "Normal"
