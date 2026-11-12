@@ -10,6 +10,8 @@ class BaseConfig:
     SECRET_KEY = os.environ.get("SECRET_KEY") or os.urandom(32).hex()
     # Which deployment slot/track this process belongs to (blue, canary, ...).
     TRACK = os.environ.get("ACEEST_TRACK", "local")
+    # SQLite file; the container points this at the /data volume
+    DATABASE = os.environ.get("ACEEST_DB", "aceest_fitness.db")
     TESTING = False
     DEBUG = False
 

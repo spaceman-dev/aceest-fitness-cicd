@@ -16,6 +16,11 @@
   </header>
 
   <main class="shell">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, text in messages %}
+        <p class="flash flash-{{ category }}">{{ text }}</p>
+      {% endfor %}
+    {% endwith %}
     {% block content %}{% endblock %}
   </main>
 
