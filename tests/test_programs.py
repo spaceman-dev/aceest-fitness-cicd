@@ -12,6 +12,11 @@ def test_catalogue_has_the_three_launch_programs():
     assert [p["code"] for p in list_programs()] == ["FL", "MG", "BG"]
 
 
+@pytest.mark.parametrize(("code", "factor"), [("FL", 22), ("MG", 35), ("BG", 26)])
+def test_calorie_factors(code, factor):
+    assert PROGRAMS[code]["calorie_factor"] == factor
+
+
 @pytest.mark.parametrize("code", ["FL", "MG", "BG"])
 def test_every_program_has_a_plan_and_a_colour(code):
     program = PROGRAMS[code]

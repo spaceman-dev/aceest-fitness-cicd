@@ -5,15 +5,31 @@
 <section class="split">
   <div class="card">
     <h2>Client Profile</h2>
-    <form method="get" action="{{ url_for('web.dashboard') }}" class="stack">
-      <label>Select program
-        <select name="program">
+    <form method="post" action="{{ url_for('web.save_profile') }}" class="stack">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label>Name
+        <input type="text" name="name" required maxlength="50" value="{{ form.name or '' }}">
+      </label>
+      <label>Age
+        <input type="number" name="age" required min="10" max="100" value="{{ form.age or '' }}">
+      </label>
+      <label>Weight (kg)
+        <input type="number" name="weight_kg" required step="0.1" min="25" max="300" value="{{ form.weight_kg or '' }}">
+      </label>
+      <label>Program
+        <select name="program" required>
           {% for program in programs %}
             <option value="{{ program.code }}" {% if selected and selected.code == program.code %}selected{% endif %}>{{ program.name }}</option>
           {% endfor %}
         </select>
       </label>
-      <button type="submit">Show plan</button>
+      <label>Weekly adherence (%)
+        <input type="number" name="adherence" min="0" max="100" value="{{ form.adherence or 0 }}">
+      </label>
+      <div class="actions">
+        <button type="submit">Save Client</button>
+        <a class="button-link" href="{{ url_for('web.dashboard') }}">Reset</a>
+      </div>
     </form>
     <pre class="site-metrics">CAPACITY: {{ metrics.capacity_users }} Users
 AREA: {{ "{:,}".format(metrics.area_sq_ft) }} sq ft
@@ -21,22 +37,28 @@ BREAK-EVEN: {{ metrics.break_even_members }} Members</pre>
   </div>
 
   <div>
+    {% if error %}
+      <p class="flash flash-error">{{ error }}</p>
+    {% elif profile %}
+      <p class="flash flash-success">Client {{ profile.name }} saved successfully. Adherence: {{ profile.adherence }}%</p>
+    {% endif %}
     <div class="card">
-      <h2>Weekly Workout Chart</h2>
+      <h2>Weekly Training Plan</h2>
       {% if selected %}
         <p class="plan" style="color: {{ selected.colour }}">{{ selected.workout }}</p>
       {% else %}
-        <p class="empty">Select a profile to view workout</p>
+        <p class="empty">Select a program to view the workout</p>
       {% endif %}
     </div>
     <div class="card">
-      <h2>Daily Nutrition Plan (Tamil Nadu Context)</h2>
+      <h2>Nutrition Plan (TN Context)</h2>
       {% if selected %}
         <p class="plan">{{ selected.diet }}</p>
       {% else %}
-        <p class="empty">Select a profile to view diet</p>
+        <p class="empty">Select a program to view the diet</p>
       {% endif %}
     </div>
+    <p class="calories">Estimated Calories: {% if profile %}{{ profile.calories }} kcal{% else %}--{% endif %}</p>
   </div>
 </section>
 
@@ -46,6 +68,7 @@ BREAK-EVEN: {{ metrics.break_even_members }} Members</pre>
     {% for program in programs %}
       <article class="program" style="border-top-color: {{ program.colour }}">
         <h3><a href="{{ url_for('web.dashboard', program=program.code) }}">{{ program.name }}</a></h3>
+        <p class="muted">{{ program.calorie_factor }} kcal per kg per day</p>
         <h4>Weekly workout</h4>
         <p class="plan">{{ program.workout }}</p>
         <h4>Nutrition</h4>

@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: aceest-data
+  namespace: aceest-ab
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aceest-a
+  namespace: aceest-ab
+  labels:
+    app: aceest
+spec:
+  selector:
+    app: aceest
+    variant: a
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aceest-b
+  namespace: aceest-ab
+  labels:
+    app: aceest
+spec:
+  selector:
+    app: aceest
+    variant: b
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+# everyone outside the experiment segment gets variant A
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aceest
+  namespace: aceest-ab
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: ab.aceest.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: aceest-a
+                port:
+                  name: http

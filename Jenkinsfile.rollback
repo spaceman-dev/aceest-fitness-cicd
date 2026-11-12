@@ -1,0 +1,47 @@
+// ACEest Fitness & Gym - manual rollback.
+//
+// The release pipeline already reverts a failed rollout by itself. This job is
+// for the other case: a release went out fine, then something turned up later.
+// Pick the lane and, optionally, the exact image to go back to.
+
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+    }
+
+    parameters {
+        choice(name: 'STRATEGY', choices: ['rolling', 'blue-green', 'canary', 'ab-testing', 'shadow'],
+               description: 'Release lane to roll back')
+        string(name: 'TARGET_IMAGE', defaultValue: '',
+               description: 'Optional image to restore, e.g. 192.168.89.10:5000/aceest-fitness:3.1.2. ' +
+                            'Empty = previous revision / standby slot / end the experiment.')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Rollback') {
+            steps {
+                withCredentials([file(credentialsId: 'kubeconfig-aceest', variable: 'KUBECONFIG')]) {
+                    withEnv(["INGRESS=${env.ACEEST_INGRESS ?: 'http://192.168.89.2'}"]) {
+                        sh 'scripts/rollback.sh "$STRATEGY" "$TARGET_IMAGE"'
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "${params.STRATEGY} rolled back"
+        }
+    }
+}

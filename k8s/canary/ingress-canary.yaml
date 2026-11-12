@@ -1,0 +1,25 @@
+# Second ingress for the same host. ingress-nginx sends ${WEIGHT}% of requests
+# to the canary Service; "X-Canary: always" forces a request onto the canary
+# (the pipeline's smoke tests use that) and "never" keeps it off.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aceest-canary
+  namespace: aceest-canary
+  annotations:
+    nginx.ingress.kubernetes.io/canary: "true"
+    nginx.ingress.kubernetes.io/canary-weight: "${WEIGHT}"
+    nginx.ingress.kubernetes.io/canary-by-header: "X-Canary"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: canary.aceest.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: aceest-canary
+                port:
+                  name: http

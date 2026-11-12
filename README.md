@@ -33,9 +33,53 @@ docker run -p 5000:5000 aceest-fitness
 | GET | `/api/programs` | program catalogue |
 | GET | `/api/programs/<code>` | one program (`FL`, `MG`, `BG`) |
 | GET | `/api/site` | capacity / area / break-even figures |
+| POST | `/api/calories` | `{"weight_kg", "program"}` -> daily calorie estimate |
+| POST | `/api/profile` | validates a client profile and returns it with calories |
 
 Every response carries `X-ACEest-Version` and `X-ACEest-Track` headers so it is
 always clear which build answered.
+
+## Pipeline
+
+Jenkins runs a multibranch job that polls GitHub every two minutes:
+
+```
+Checkout -> Install -> Lint -> Unit Tests -> SonarQube Analysis* -> Quality Gate*
+  -> Build Image -> Test in Container -> Package -> Publish Image** -> Deploy to Kubernetes*
+```
+
+`*` main only, `**` main and release tags. Feature branches stop after Package.
+Every build archives a wheel, a source tarball and `release.json`; tag builds
+push the release image `X.Y.Z`, main builds push `X.Y.Z-<commit>` and roll it out.
+
+## Release strategies
+
+Each strategy has its own namespace on a local minikube cluster and its own
+URL through the ingress (port 8088 on the host):
+
+| Strategy | URL | Release | Rollback |
+| --- | --- | --- | --- |
+| Rolling update | http://rolling.aceest.localhost:8088 | pods replaced one at a time, never below 3 ready | `kubectl rollout undo` |
+| Blue-green | http://bluegreen.aceest.localhost:8088 | idle slot tested on `preview.bluegreen...`, then the live Service selector flips | flip the selector back |
+| Canary | http://canary.aceest.localhost:8088 | 10% -> 30% -> 60% of requests, checked at every step, then promoted | weight back to 0 |
+| A/B testing | http://ab.aceest.localhost:8088 | variant B only for `X-Variant: B` or cookie `ab_variant_b=always` | remove B's route |
+| Shadow | http://shadow.aceest.localhost:8088 | new version receives a mirrored copy of live traffic first | stop the shadow |
+
+`http://aceest.localhost:8088` follows the blue-green live slot and is the main
+entry point. The scripts in `scripts/` do the work and revert automatically
+when a rollout or its smoke tests fail; the `ACEest Rollback` Jenkins job
+(`Jenkinsfile.rollback`) is the manual route back. A rollback drill is one
+click: run main with `FAULT_INJECTION=unhealthy` or `errors`.
+
+## Local toolchain
+
+```bash
+infra/cluster/bootstrap.sh   # registry, minikube profile, namespaces, RBAC, Jenkins kubeconfig
+infra/up.sh                  # Jenkins on :8090, SonarQube on :9001
+```
+
+Secrets (Jenkins admin password, SonarQube token, kubeconfig) are read from
+`~/.aceest-ci/secrets`; nothing sensitive is committed.
 
 ## Versioning
 

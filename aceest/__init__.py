@@ -6,12 +6,15 @@ from collections.abc import Mapping
 from typing import Any
 
 from flask import Flask, jsonify, request
+from flask_wtf.csrf import CSRFProtect
 from werkzeug.exceptions import HTTPException
 
 from .config import get_config
 from .errors import ACEestError
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"
+
+csrf = CSRFProtect()
 
 
 def create_app(config_name: str | None = None,
@@ -23,6 +26,7 @@ def create_app(config_name: str | None = None,
         app.config.update(overrides)
     app.json.sort_keys = False
 
+    csrf.init_app(app)
     _register_blueprints(app)
     _register_error_handlers(app)
     _register_release_info(app)
@@ -33,6 +37,9 @@ def _register_blueprints(app: Flask) -> None:
     from .routes.api import api_bp
     from .routes.web import web_bp
 
+    # The JSON API takes no cookies and only JSON bodies, which a cross-site
+    # form cannot send, so CSRF tokens apply to the HTML forms only.
+    csrf.exempt(api_bp)
     app.register_blueprint(api_bp)
     app.register_blueprint(web_bp)
 
