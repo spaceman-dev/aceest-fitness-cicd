@@ -13,7 +13,7 @@ from .config import get_config
 from .errors import ACEestError
 from .roster import ClientRoster
 
-__version__ = "1.1.0"
+__version__ = "1.1.2"
 
 csrf = CSRFProtect()
 
