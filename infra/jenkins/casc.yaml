@@ -93,3 +93,26 @@ jobs:
           }
         }
       }
+
+      pipelineJob('aceest-rollback') {
+        displayName('ACEest Rollback')
+        description('Manually revert one release lane to its previous version, its standby slot or a chosen image.')
+        parameters {
+          choiceParam('STRATEGY', ['rolling', 'blue-green', 'canary', 'ab-testing', 'shadow'], 'Release lane to roll back')
+          stringParam('TARGET_IMAGE', '', 'Optional image to restore; empty = previous revision / standby slot / end the experiment')
+        }
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote {
+                  url('${ACEEST_REPO_URL:-https://github.com/spaceman-dev/aceest-fitness-cicd.git}')
+                }
+                branch('*/main')
+              }
+            }
+            scriptPath('Jenkinsfile.rollback')
+            lightweight(true)
+          }
+        }
+      }
