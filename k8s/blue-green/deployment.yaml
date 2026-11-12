@@ -1,0 +1,88 @@
+# Blue-green: two full copies of the app, "aceest-blue" and "aceest-green".
+# A release goes to whichever slot is idle; live traffic only moves once the
+# idle slot has passed its tests (see services.yaml).
+# ${SLOT} is blue or green; the rest is filled in by scripts/deploy-blue-green.sh
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aceest-${SLOT}
+  namespace: aceest-bluegreen
+  labels:
+    app: aceest
+    slot: ${SLOT}
+  annotations:
+    kubernetes.io/change-cause: "${CHANGE_CAUSE}"
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: aceest
+      slot: ${SLOT}
+  template:
+    metadata:
+      labels:
+        app: aceest
+        slot: ${SLOT}
+        version: "${VERSION}"
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: web
+          image: ${IMAGE}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 5000
+          env:
+            - name: ACEEST_TRACK
+              value: ${SLOT}
+            - name: ACEEST_DB
+              value: /data/aceest.db
+            - name: ACEEST_FAULT
+              value: "${FAULT}"
+          envFrom:
+            - secretRef:
+                name: aceest-app
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 2
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 96Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        # both slots share one database, so switching slots never loses data
+        - name: data
+          persistentVolumeClaim:
+            claimName: aceest-data
+        - name: tmp
+          emptyDir: {}

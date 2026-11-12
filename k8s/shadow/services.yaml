@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: aceest-data
+  namespace: aceest-shadow
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aceest-live
+  namespace: aceest-shadow
+  labels:
+    app: aceest
+spec:
+  selector:
+    app: aceest
+    role: live
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aceest-shadow
+  namespace: aceest-shadow
+  labels:
+    app: aceest
+spec:
+  selector:
+    app: aceest
+    role: shadow
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+# Users are served by aceest-live; nginx mirrors each request (body included)
+# to aceest-shadow and throws the shadow's response away.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aceest
+  namespace: aceest-shadow
+  annotations:
+    nginx.ingress.kubernetes.io/mirror-target: "http://aceest-shadow.aceest-shadow.svc.cluster.local$request_uri"
+    nginx.ingress.kubernetes.io/mirror-request-body: "on"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: shadow.aceest.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: aceest-live
+                port:
+                  name: http

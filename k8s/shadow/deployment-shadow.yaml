@@ -1,0 +1,85 @@
+# Shadow: the candidate version. It receives a copy of live traffic but its
+# responses are discarded by the ingress, so users never see it. It writes to
+# its own throwaway database - mirrored POSTs must not change live data.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aceest-shadow
+  namespace: aceest-shadow
+  labels:
+    app: aceest
+    role: shadow
+  annotations:
+    kubernetes.io/change-cause: "${CHANGE_CAUSE}"
+spec:
+  replicas: 1
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: aceest
+      role: shadow
+  template:
+    metadata:
+      labels:
+        app: aceest
+        role: shadow
+        version: "${VERSION}"
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: web
+          image: ${IMAGE}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 5000
+          env:
+            - name: ACEEST_TRACK
+              value: shadow
+            - name: ACEEST_DB
+              value: /data/aceest.db
+            - name: ACEEST_FAULT
+              value: "${FAULT}"
+          envFrom:
+            - secretRef:
+                name: aceest-app
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 2
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 96Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}

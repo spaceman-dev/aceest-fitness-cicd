@@ -1,0 +1,34 @@
+# The live Service is the switch: changing its "slot" selector moves all
+# traffic at once, and changing it back is the rollback.
+# The preview Service always points at the slot being tested.
+apiVersion: v1
+kind: Service
+metadata:
+  name: aceest
+  namespace: aceest-bluegreen
+  labels:
+    app: aceest
+spec:
+  selector:
+    app: aceest
+    slot: ${ACTIVE_SLOT}
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aceest-preview
+  namespace: aceest-bluegreen
+  labels:
+    app: aceest
+spec:
+  selector:
+    app: aceest
+    slot: ${PREVIEW_SLOT}
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

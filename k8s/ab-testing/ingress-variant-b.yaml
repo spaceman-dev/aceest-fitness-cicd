@@ -1,0 +1,26 @@
+# Variant B segment: requests with "X-Variant: B" (set by the mobile beta app,
+# for example) or browsers holding the cookie ab_variant_b=always.
+# Deleting this ingress ends the experiment - everyone is back on A.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: aceest-b
+  namespace: aceest-ab
+  annotations:
+    nginx.ingress.kubernetes.io/canary: "true"
+    nginx.ingress.kubernetes.io/canary-by-header: "X-Variant"
+    nginx.ingress.kubernetes.io/canary-by-header-value: "B"
+    nginx.ingress.kubernetes.io/canary-by-cookie: "ab_variant_b"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: ab.aceest.localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: aceest-b
+                port:
+                  name: http

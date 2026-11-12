@@ -1,0 +1,91 @@
+# Canary: the same template is used for both tracks.
+#   TRACK=stable  REPLICAS=3  -> serves everyone by default
+#   TRACK=canary  REPLICAS=1  -> gets the share set on ingress-canary.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aceest-${TRACK}
+  namespace: aceest-canary
+  labels:
+    app: aceest
+    track: ${TRACK}
+  annotations:
+    kubernetes.io/change-cause: "${CHANGE_CAUSE}"
+spec:
+  replicas: ${REPLICAS}
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: aceest
+      track: ${TRACK}
+  template:
+    metadata:
+      labels:
+        app: aceest
+        track: ${TRACK}
+        version: "${VERSION}"
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: web
+          image: ${IMAGE}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 5000
+          env:
+            - name: ACEEST_TRACK
+              value: ${TRACK}
+            - name: ACEEST_DB
+              value: /data/aceest.db
+            - name: ACEEST_FAULT
+              value: "${FAULT}"
+          envFrom:
+            - secretRef:
+                name: aceest-app
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 2
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 96Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: aceest-data
+        - name: tmp
+          emptyDir: {}
