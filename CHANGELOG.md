@@ -3,6 +3,18 @@
 Versions follow the numbering of the original ACEest desktop builds
 (`Aceestver-X.Y.Z.py`); each one is ported to the Flask app and tagged `vX.Y.Z`.
 
+## 2.0.1
+
+- Clients and weekly progress are stored in SQLite instead of process
+  memory, so they survive restarts and every replica sees the same data.
+- Numbered schema migrations (`schema_version`), applied at start-up under a
+  single write lock so replicas starting together don't race.
+- Client page ("Load Client") with the profile summary and weekly progress;
+  `GET/PUT /api/clients/<name>`, `GET/POST /api/clients/<name>/progress`.
+- "Save Client" on the dashboard creates or updates, like the desktop build.
+- Runtime image keeps the database on the `/data` volume.
+- Pipeline: smoke tests wait for the replaced pods to be gone first.
+
 ## 1.1.2
 
 - Client roster: saved clients are listed on the dashboard with their coach
