@@ -1,0 +1,127 @@
+:root {
+  --bg: #131313;
+  --surface: #1c1c1c;
+  --surface-2: #242424;
+  --gold: #d4af37;
+  --text: #f2f2f2;
+  --muted: #9a9a9a;
+  --ok: #2ecc71;
+  --err: #e74c3c;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+}
+
+.masthead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+  background: var(--gold);
+  color: #101010;
+}
+
+.brand {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  color: #101010;
+}
+
+.masthead nav a {
+  margin-left: 1.25rem;
+  color: #101010;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.shell {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 3rem;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid #2c2c2c;
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.card h2 { margin-top: 0; color: var(--gold); font-size: 1.1rem; letter-spacing: 0.04em; }
+.card h3 { font-size: 0.95rem; color: var(--gold); }
+
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+.grid-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+.grid-programs { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+
+.metric { text-align: center; }
+.metric-value { display: block; font-size: 2rem; font-weight: 700; color: var(--gold); }
+.metric-label { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; }
+
+.stack { display: flex; flex-direction: column; gap: 0.75rem; }
+.stack label { display: flex; flex-direction: column; font-size: 0.85rem; color: var(--muted); gap: 0.25rem; }
+
+input, select {
+  background: var(--surface-2);
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  padding: 0.5rem 0.6rem;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+button {
+  background: var(--gold);
+  color: #101010;
+  border: 0;
+  border-radius: 6px;
+  padding: 0.6rem 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+table.roster { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+table.roster th { text-align: left; color: var(--muted); font-weight: 600; border-bottom: 1px solid #333; padding: 0.4rem 0; }
+table.roster td { padding: 0.45rem 0; border-bottom: 1px solid #262626; }
+table.roster a { color: var(--gold); text-decoration: none; }
+
+.program { background: var(--surface-2); border-radius: 8px; border-top: 4px solid var(--gold); padding: 0.9rem 1rem; }
+.program h3 { margin: 0 0 0.25rem; font-size: 1rem; }
+.program h3 a { color: var(--text); text-decoration: none; }
+.program h4 { margin: 0.75rem 0 0.25rem; font-size: 0.75rem; color: var(--muted); text-transform: uppercase; }
+
+.plan { white-space: pre-line; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.82rem; color: #d8d8d8; }
+.muted { color: var(--muted); font-size: 0.85rem; }
+.site-metrics { background: var(--surface-2); color: #ddd; padding: 0.75rem 1rem; border-radius: 6px; font-size: 0.82rem; margin: 1.25rem 0 0; }
+.empty { color: var(--muted); font-style: italic; }
+
+.profile { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; margin: 0; }
+.profile dt { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; }
+.profile dd { margin: 0; font-size: 1.05rem; font-weight: 600; }
+
+.summary { list-style: none; padding: 0; font-size: 0.9rem; }
+.bars { list-style: none; padding: 0; }
+.bars li { display: grid; grid-template-columns: 3rem 1fr 3rem; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; font-size: 0.8rem; }
+.bar { background: var(--surface-2); border-radius: 4px; height: 10px; overflow: hidden; }
+.bar-fill { display: block; height: 100%; background: var(--ok); }
+
+.flash-stack { list-style: none; padding: 0; margin: 0 0 1.25rem; }
+.flash { padding: 0.65rem 1rem; border-radius: 6px; margin-bottom: 0.5rem; font-size: 0.9rem; }
+.flash-success { background: rgba(46, 204, 113, 0.15); border-left: 4px solid var(--ok); }
+.flash-error { background: rgba(231, 76, 60, 0.15); border-left: 4px solid var(--err); }
+
+.footer { text-align: center; color: var(--muted); font-size: 0.75rem; padding: 1.5rem; border-top: 1px solid #262626; }
+
+@media (max-width: 800px) {
+  .split, .grid-metrics { grid-template-columns: 1fr; }
+}

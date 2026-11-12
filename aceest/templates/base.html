@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}ACEest Fitness &amp; Gym{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <header class="masthead">
+    <a class="brand" href="{{ url_for('web.dashboard') }}">ACEest FUNCTIONAL FITNESS</a>
+    <nav>
+      <a href="{{ url_for('web.dashboard') }}">Dashboard</a>
+      <a href="{{ url_for('api.programs') }}">API</a>
+    </nav>
+  </header>
+
+  <main class="shell">
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="footer">
+    ACEest Fitness &amp; Gym &middot; v{{ app_version }} &middot; {{ app_track }}
+  </footer>
+</body>
+</html>
