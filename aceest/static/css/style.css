@@ -125,3 +125,7 @@ table.roster a { color: var(--gold); text-decoration: none; }
 @media (max-width: 800px) {
   .split, .grid-metrics { grid-template-columns: 1fr; }
 }
+
+.actions { display: flex; gap: 0.75rem; align-items: center; }
+.button-link { color: var(--gold); text-decoration: none; font-weight: 600; }
+.calories { font-size: 1.1rem; font-weight: 700; color: var(--gold); margin: 0 0 1.5rem; }
