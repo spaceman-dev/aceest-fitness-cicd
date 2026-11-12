@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Virtual environments
+.venv/
+.venv-ci/
+venv/
+
+# Test and coverage output
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+reports/
+
+# SonarScanner work dir
+.scannerwork/
+
+# Local data
+*.db
+*.sqlite3
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Secrets and machine-specific certificates
+.env
+*.pem
+*.key
+infra/jenkins/extra-ca/*.crt
