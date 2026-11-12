@@ -20,6 +20,8 @@ jenkins:
         env:
           - key: "ACEEST_IMAGE_REPO"
             value: "${ACEEST_IMAGE_REPO:-192.168.89.10:5000/aceest-fitness}"
+          - key: "ACEEST_REGISTRY_CREDENTIALS"
+            value: "${ACEEST_REGISTRY_CREDENTIALS:-}"
           - key: "ACEEST_INGRESS"
             value: "${ACEEST_INGRESS:-http://192.168.89.2}"
           - key: "ACEEST_DOCKER_NETWORK"
@@ -50,6 +52,13 @@ credentials:
               description: "kubeconfig for the jenkins-deployer service account"
               fileName: "kubeconfig"
               secretBytes: "${readFileBase64:/run/secrets/kubeconfig}"
+          # only used when ACEEST_REGISTRY_CREDENTIALS=registry (e.g. Docker Hub)
+          - usernamePassword:
+              scope: GLOBAL
+              id: "registry"
+              description: "Container registry login"
+              username: "${REGISTRY_USER:-}"
+              password: "${REGISTRY_PASSWORD:-}"
 
 jobs:
   - script: |
@@ -83,6 +92,9 @@ jobs:
           }
         }
         triggers {
+          // This scan is the poll: every 2 minutes it checks GitHub and builds
+          // new commits, new branches and new tags (GitHub cannot reach this
+          // laptop, so no webhooks). pollSCM on top of it built pushes twice.
           periodicFolderTrigger {
             interval('2m')
           }

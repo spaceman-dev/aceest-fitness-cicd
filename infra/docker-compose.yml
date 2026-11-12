@@ -22,7 +22,10 @@ services:
       - sonarqube_extensions:/opt/sonarqube/extensions
       - sonarqube_logs:/opt/sonarqube/logs
     networks:
-      - aceest-net
+      aceest-net:
+        # fixed, so a restart can never hand out 192.168.89.2 (minikube node)
+        # or .10 (registry) before those containers are back
+        ipv4_address: 192.168.89.21
 
   jenkins:
     build: ./jenkins
@@ -36,6 +39,10 @@ services:
       - "${DOCKER_GID:-991}"
     environment:
       ACEEST_REPO_URL: "${ACEEST_REPO_URL:-https://github.com/spaceman-dev/aceest-fitness-cicd.git}"
+      # local registry by default; for Docker Hub see README "Local toolchain"
+      ACEEST_IMAGE_REPO: "${ACEEST_IMAGE_REPO:-192.168.89.10:5000/aceest-fitness}"
+      ACEEST_REGISTRY_CREDENTIALS: "${ACEEST_REGISTRY_CREDENTIALS:-}"
+      REGISTRY_USER: "${REGISTRY_USER:-}"
       JAVA_OPTS: "-Djenkins.install.runSetupWizard=false ${EXTRA_JAVA_OPTS:-}"
     ports:
       - "8090:8080"
@@ -44,7 +51,8 @@ services:
       - jenkins_secrets:/run/secrets:ro
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
-      - aceest-net
+      aceest-net:
+        ipv4_address: 192.168.89.20
 
 networks:
   aceest-net:

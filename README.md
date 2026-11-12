@@ -90,7 +90,9 @@ URL through the ingress (port 8088 on the host):
 entry point. The scripts in `scripts/` do the work and revert automatically
 when a rollout or its smoke tests fail; the `ACEest Rollback` Jenkins job
 (`Jenkinsfile.rollback`) is the manual route back. A rollback drill is one
-click: run main with `FAULT_INJECTION=unhealthy` or `errors`.
+click: run main with `FAULT_INJECTION=unhealthy` (new pods never become
+ready) or `errors` (pods look healthy but the API answers 500, which only the
+smoke tests and the canary/shadow checks catch).
 
 ## Local toolchain
 
@@ -101,6 +103,19 @@ infra/up.sh                  # Jenkins on :8090, SonarQube on :9001
 
 Secrets (Jenkins admin password, SonarQube token, kubeconfig) are read from
 `~/.aceest-ci/secrets`; nothing sensitive is committed.
+
+Images go to the local registry `192.168.89.10:5000/aceest-fitness`
+(`localhost:5005` from the host). To publish to Docker Hub instead, put an
+access token in `~/.aceest-ci/secrets/REGISTRY_PASSWORD` and restart Jenkins
+with
+
+```bash
+REGISTRY_USER=<user> ACEEST_IMAGE_REPO=<user>/aceest-fitness \
+ACEEST_REGISTRY_CREDENTIALS=registry infra/up.sh
+```
+
+Tags already in the local registry can be copied across with
+`docker login && scripts/mirror-images.sh <user>/aceest-fitness`.
 
 ## Versioning
 

@@ -5,6 +5,8 @@
 #
 # Expected files in $SECRETS_DIR:
 #   JENKINS_ADMIN_PASSWORD  SONAR_TOKEN  kubeconfig
+# Optional:
+#   REGISTRY_PASSWORD       registry token, e.g. a Docker Hub access token
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -18,7 +20,9 @@ docker volume create aceest-ci_jenkins_secrets >/dev/null
 docker run --rm \
   -v aceest-ci_jenkins_secrets:/target \
   -v "$SECRETS_DIR":/source:ro \
-  alpine:3.20 sh -c 'cp /source/JENKINS_ADMIN_PASSWORD /source/SONAR_TOKEN /source/kubeconfig /target/ \
+  alpine:3.20 sh -c 'rm -f /target/* \
+    && cp /source/JENKINS_ADMIN_PASSWORD /source/SONAR_TOKEN /source/kubeconfig /target/ \
+    && if [ -s /source/REGISTRY_PASSWORD ]; then cp /source/REGISTRY_PASSWORD /target/; fi \
     && chown -R 1000:1000 /target && chmod 0400 /target/*'
 
 docker compose -f "$HERE/docker-compose.yml" up -d --build "$@"

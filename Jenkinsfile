@@ -19,10 +19,9 @@ pipeline {
         timeout(time: 30, unit: 'MINUTES')
     }
 
-    triggers {
-        // Jenkins runs on a laptop that GitHub cannot reach, so it polls instead of using a webhook
-        pollSCM('H/2 * * * *')
-    }
+    // No triggers block: the multibranch job polls GitHub every 2 minutes
+    // (infra/jenkins/casc.yaml) and starts a build for every new commit or tag.
+    // A pollSCM trigger here as well made some pushes build twice.
 
     parameters {
         string(name: 'STRATEGIES', defaultValue: 'rolling,blue-green,canary,ab-testing,shadow',
@@ -250,6 +249,14 @@ void registryLogin(String credentialsId) {
     withCredentials([usernamePassword(credentialsId: credentialsId,
                                       usernameVariable: 'REG_USER',
                                       passwordVariable: 'REG_PASS')]) {
-        sh 'echo "$REG_PASS" | docker login -u "$REG_USER" --password-stdin "${IMAGE_REPO%%/*}"'
+        // "host:port/name" logs in to that host; "user/name" is a Docker Hub repository
+        sh '''
+            server="${IMAGE_REPO%%/*}"
+            case "$server" in
+                *.*|*:*|localhost) ;;
+                *) server="" ;;
+            esac
+            echo "$REG_PASS" | docker login -u "$REG_USER" --password-stdin $server
+        '''
     }
 }
