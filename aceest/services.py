@@ -11,7 +11,7 @@ from datetime import date, datetime
 from typing import Any
 
 from .errors import ValidationError
-from .programs import WORKOUT_TYPES, get_program
+from .programs import SITE_METRICS, WORKOUT_TYPES, get_program
 
 NAME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z .'\-]{1,49}$")
 WEEK_PATTERN = re.compile(r"^(\d{4})-W(\d{2})$")
@@ -241,6 +241,10 @@ def summarise_adherence(entries: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
         "latest_adherence": values[-1],
         "trend": trend,
     }
+
+
+def capacity_used_pct(active_clients: int) -> float:
+    return round(active_clients / SITE_METRICS["capacity_users"] * 100, 1)
 
 
 def calculate_calories(weight_kg: Any, program: Any) -> int:

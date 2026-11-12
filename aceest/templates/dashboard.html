@@ -2,6 +2,25 @@
 {% block title %}Dashboard &middot; ACEest Fitness{% endblock %}
 
 {% block content %}
+<section class="grid-metrics">
+  <article class="card metric">
+    <span class="metric-value">{{ clients|length }}</span>
+    <span class="metric-label">Active clients</span>
+  </article>
+  <article class="card metric">
+    <span class="metric-value">{{ metrics.capacity_users }}</span>
+    <span class="metric-label">Floor capacity</span>
+  </article>
+  <article class="card metric">
+    <span class="metric-value">{{ capacity_pct }}%</span>
+    <span class="metric-label">Capacity used</span>
+  </article>
+  <article class="card metric">
+    <span class="metric-value">{{ metrics.break_even_members }}</span>
+    <span class="metric-label">Break-even members</span>
+  </article>
+</section>
+
 <section class="split">
   <div class="card">
     <h2>Client Profile</h2>

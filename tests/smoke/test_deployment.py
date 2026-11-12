@@ -95,3 +95,11 @@ def test_bmi_band():
     status, text = call("/api/bmi", {"weight_kg": 80, "height_cm": 180})
     assert status == 200
     assert json.loads(text)["category"] == "Normal"
+
+
+def test_metrics_endpoint_reports_the_build():
+    status, text = call("/metrics")
+    assert status == 200
+    assert "aceest_build_info" in text
+    if EXPECTED_VERSION:
+        assert f'version="{EXPECTED_VERSION}"' in text
