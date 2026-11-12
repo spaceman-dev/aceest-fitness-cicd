@@ -2,14 +2,29 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
-from flask import Blueprint, current_app, jsonify
+from flask import Blueprint, current_app, jsonify, request
 
-from ..errors import NotFoundError
+from ..errors import NotFoundError, ValidationError
 from ..programs import SITE_METRICS, get_program, list_programs
+from ..services import (
+    build_profile,
+    calculate_calories,
+    require,
+    validate_program,
+    validate_weight_kg,
+)
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
+
+
+def _json_body() -> Mapping[str, Any]:
+    body = request.get_json(silent=True)
+    if not isinstance(body, Mapping):
+        raise ValidationError("request body must be a JSON object")
+    return body
 
 
 @api_bp.get("/health")
@@ -41,3 +56,23 @@ def program_detail(code: str) -> Any:
 @api_bp.get("/site")
 def site() -> Any:
     return jsonify(SITE_METRICS)
+
+
+@api_bp.post("/calories")
+def calories() -> Any:
+    body = _json_body()
+    weight = validate_weight_kg(require(body, "weight_kg"))
+    program = validate_program(require(body, "program"))
+    return jsonify({
+        "weight_kg": weight,
+        "program": program["code"],
+        "program_name": program["name"],
+        "factor": program["calorie_factor"],
+        "calories": calculate_calories(weight, program["code"]),
+    })
+
+
+@api_bp.post("/profile")
+def profile() -> Any:
+    """Validate a client profile and return it with its calorie estimate."""
+    return jsonify(build_profile(_json_body()))

@@ -18,5 +18,9 @@ class ACEestError(Exception):
         return payload
 
 
+class ValidationError(ACEestError):
+    status_code = 400
+
+
 class NotFoundError(ACEestError):
     status_code = 404
