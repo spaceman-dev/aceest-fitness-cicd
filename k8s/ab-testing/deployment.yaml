@@ -50,6 +50,12 @@ spec:
           envFrom:
             - secretRef:
                 name: aceest-app
+          lifecycle:
+            # keep serving while the endpoint removal reaches ingress-nginx,
+            # otherwise a rollout drops the requests still routed to this pod
+            preStop:
+              sleep:
+                seconds: 5
           readinessProbe:
             httpGet:
               path: /api/health

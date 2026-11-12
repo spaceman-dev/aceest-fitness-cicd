@@ -51,7 +51,10 @@ def test_health_reports_the_expected_version():
     # right after a switch the ingress may still be reloading, so allow it a moment
     deadline = time.monotonic() + 30
     while True:
-        status, text = call("/api/health")
+        try:
+            status, text = call("/api/health")
+        except OSError as error:  # connection refused/reset or timeout while endpoints settle
+            status, text = 0, str(error)
         body = json.loads(text) if status == 200 else {}
         if status == 200 and body.get("version", "") == (EXPECTED_VERSION or body.get("version")):
             break
