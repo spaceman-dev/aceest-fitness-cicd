@@ -74,3 +74,9 @@ def test_program_catalogue_is_served():
     status, text = call("/api/programs")
     assert status == 200
     assert json.loads(text)["count"] >= 3
+
+
+def test_calorie_estimate_matches_the_program_factor():
+    status, text = call("/api/calories", {"weight_kg": 80, "program": "MG"})
+    assert status == 200
+    assert json.loads(text)["calories"] == 2800
