@@ -9,7 +9,7 @@ from flask import Flask, jsonify, request
 from flask_wtf.csrf import CSRFProtect
 from werkzeug.exceptions import HTTPException
 
-from . import db
+from . import db, observability
 from .config import get_config
 from .errors import ACEestError
 
@@ -29,6 +29,7 @@ def create_app(config_name: str | None = None,
 
     db.init_app(app)
     csrf.init_app(app)
+    observability.init_app(app)
     _register_blueprints(app)
     _register_error_handlers(app)
     _register_release_info(app)
