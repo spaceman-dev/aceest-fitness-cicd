@@ -32,9 +32,9 @@ docker run -p 5000:5000 aceest-fitness
 | GET | `/api/health` | status, version and deployment track |
 | GET | `/api/programs` | program catalogue |
 | GET | `/api/programs/<code>` | one program (`FL3`, `FL5`, `MG`, `BG`) |
-| GET | `/api/site` | capacity / area / break-even figures |
+| GET | `/api/stats` | clients by program, average calories, capacity used |
+| GET | `/metrics` | Prometheus metrics for the pod |
 | POST | `/api/calories` | `{"weight_kg", "program"}` -> daily calorie estimate |
-| POST | `/api/profile` | validates a client profile and returns it with calories |
 | POST | `/api/bmi` | `{"weight_kg", "height_cm"}` -> BMI, band and risk note |
 | GET, POST | `/api/clients` | client roster; POST adds one (409 on a duplicate name) |
 | GET | `/api/clients/export.csv` | roster as CSV |

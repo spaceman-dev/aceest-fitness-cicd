@@ -3,6 +3,20 @@
 Versions follow the numbering of the original ACEest desktop builds
 (`Aceestver-X.Y.Z.py`); each one is ported to the Flask app and tagged `vX.Y.Z`.
 
+## 3.0.1
+
+The desktop 3.0.1 build is the same code as 2.2.4. The web app uses the
+major version for the platform changes needed to run it as many replicas.
+
+- `GET /metrics` in Prometheus format: requests by route and status,
+  latency, and a build-info gauge with version and track.
+- `GET /api/stats`: clients by program, average calorie target, capacity
+  used; the dashboard shows the same figures as overview cards.
+- `/api/health` checks the database and returns 503 when it is unreachable.
+- `ACEEST_FAULT=unhealthy|errors` for rollback drills (off by default).
+- **Breaking:** `POST /api/profile` and `GET /api/site` are removed; use
+  `POST /api/clients` and `GET /api/stats`.
+
 ## 2.2.4
 
 - Four programs: Fat Loss 3-day (FL3, 22 kcal/kg), Fat Loss 5-day (FL5, 24),
