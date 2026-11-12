@@ -43,6 +43,14 @@ apply_template() { render "$1" | kc apply -f -; }
 
 rollout_ok() { kc rollout status "deployment/$1" --timeout="$ROLLOUT_TIMEOUT"; }
 
+# "rollout status" returns while replaced pods are still terminating, and they
+# keep answering through their preStop pause. Wait for them to be gone before
+# testing, or a check can land on the old version.
+#   old_pods_gone <label selector>      e.g. old_pods_gone app=aceest,track=stable
+old_pods_gone() {
+  kc wait --for=delete pod -l "$1,version!=$VERSION" --timeout=90s >/dev/null 2>&1 || true
+}
+
 deployment_exists() { kc get deployment "$1" >/dev/null 2>&1; }
 
 current_image() {

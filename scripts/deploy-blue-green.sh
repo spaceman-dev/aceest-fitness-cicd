@@ -20,6 +20,7 @@ apply_template "$K8S_DIR/blue-green/deployment.yaml"
 if ! rollout_ok "aceest-$idle"; then
   fail "the $idle slot never became ready; live traffic is still on ${live:-nothing}"
 fi
+old_pods_gone "app=aceest,slot=$idle"
 
 # preview -> idle slot; live keeps its current slot (on a first release both point at it)
 export ACTIVE_SLOT=${live:-$idle} PREVIEW_SLOT=$idle
