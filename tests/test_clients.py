@@ -45,6 +45,10 @@ class TestSchema:
         rows = connection.execute("SELECT week, adherence FROM progress").fetchall()
         assert [tuple(row) for row in rows] == [("2026-W45", 90)]
 
+    def test_database_runs_in_wal_mode(self, app):
+        with app.app_context():
+            assert db.get_db().execute("PRAGMA journal_mode").fetchone()[0] == "wal"
+
     def test_names_are_unique_regardless_of_case(self, app, profile_payload):
         with app.app_context():
             db.insert_client({**profile_payload, "calories": 2800, "notes": "", "weight_kg": 80.0})

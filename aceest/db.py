@@ -96,6 +96,9 @@ def init_app(app: Flask) -> None:
     app.teardown_appcontext(close_db)
     connection = connect(app.config["DATABASE"])
     try:
+        # WAL lets readers on other replicas carry on while one of them writes;
+        # the setting is stored in the database file itself.
+        connection.execute("PRAGMA journal_mode=WAL")
         migrate(connection)
     finally:
         connection.close()
