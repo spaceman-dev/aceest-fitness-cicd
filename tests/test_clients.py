@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import io
 import sqlite3
+from contextlib import closing
 
 import pytest
 
@@ -14,20 +15,40 @@ from aceest.exports import CSV_COLUMNS, clients_to_csv
 
 class TestSchema:
     def test_migrations_are_recorded_and_idempotent(self, tmp_path):
-        connection = db.connect(str(tmp_path / "m.db"))
-        latest = db.MIGRATIONS[-1][0]
-        assert db.migrate(connection) == latest
-        assert db.migrate(connection) == latest
-        versions = [row[0] for row in connection.execute("SELECT version FROM schema_version")]
+        with closing(db.connect(str(tmp_path / "m.db"))) as connection:
+            latest = db.MIGRATIONS[-1][0]
+            assert db.migrate(connection) == latest
+            assert db.migrate(connection) == latest
+            versions = [row[0] for row in connection.execute("SELECT version FROM schema_version")]
         assert versions == [number for number, _ in db.MIGRATIONS]
 
     def test_failed_migration_leaves_no_half_applied_schema(self, tmp_path, monkeypatch):
-        connection = db.connect(str(tmp_path / "bad.db"))
         monkeypatch.setattr(db, "MIGRATIONS", [(1, ["CREATE TABLE ok (id INTEGER)", "NOT SQL"])])
-        with pytest.raises(sqlite3.OperationalError):
-            db.migrate(connection)
-        tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master")}
+        with closing(db.connect(str(tmp_path / "bad.db"))) as connection:
+            with pytest.raises(sqlite3.OperationalError):
+                db.migrate(connection)
+            tables = {row[0] for row in connection.execute("SELECT name FROM sqlite_master")}
         assert "ok" not in tables
+
+    def test_upgrade_from_2_0_1_keeps_the_latest_duplicate_week(self, tmp_path, monkeypatch):
+        with closing(db.connect(str(tmp_path / "old.db"))) as connection:
+            monkeypatch.setattr(db, "MIGRATIONS", db.MIGRATIONS[:1])
+            db.migrate(connection)
+            connection.execute("INSERT INTO clients (name, age, weight_kg, program, calories) "
+                               "VALUES ('Ravi Kumar', 32, 80, 'MG', 2800)")
+            for adherence in (50, 70, 90):
+                connection.execute("INSERT INTO progress (client_id, week, adherence) "
+                                   "VALUES (1, '2026-W45', ?)", (adherence,))
+            connection.commit()
+            monkeypatch.undo()
+
+            assert db.migrate(connection) == db.MIGRATIONS[-1][0]
+            rows = connection.execute("SELECT week, adherence FROM progress").fetchall()
+        assert [tuple(row) for row in rows] == [("2026-W45", 90)]
+
+    def test_database_runs_in_wal_mode(self, app):
+        with app.app_context():
+            assert db.get_db().execute("PRAGMA journal_mode").fetchone()[0] == "wal"
 
     def test_names_are_unique_regardless_of_case(self, app, profile_payload):
         with app.app_context():
@@ -102,6 +123,18 @@ class TestProgressApi:
         assert response.status_code == 400
         assert response.get_json()["field"] == field
 
+    def test_logging_the_same_week_again_replaces_it(self, client, enrolled):
+        client.post("/api/clients/Ravi Kumar/progress", json={"week": "2026-W45", "adherence": 60})
+        client.post("/api/clients/Ravi Kumar/progress", json={"week": "2026-W45", "adherence": 95})
+        entries = client.get("/api/clients/Ravi Kumar/progress").get_json()["entries"]
+        assert [(e["week"], e["adherence"]) for e in entries] == [("2026-W45", 95)]
+
+    def test_entries_come_back_in_week_order(self, client, enrolled):
+        for week in ("2026-W46", "2026-W44", "2026-W45"):
+            client.post("/api/clients/Ravi Kumar/progress", json={"week": week, "adherence": 80})
+        entries = client.get("/api/clients/Ravi Kumar/progress").get_json()["entries"]
+        assert [e["week"] for e in entries] == ["2026-W44", "2026-W45", "2026-W46"]
+
     def test_progress_for_an_unknown_client_is_a_404(self, client):
         response = client.post("/api/clients/Ghost/progress", json={"adherence": 80})
         assert response.status_code == 404
@@ -145,7 +178,7 @@ class TestPages:
         response = client.post("/clients/Ravi Kumar/progress",
                                data={"week": "2026-W44", "adherence": "88"}, follow_redirects=True)
         page = response.get_data(as_text=True)
-        assert "Weekly progress logged" in page
+        assert "Week 2026-W44 recorded at 88%" in page
         assert "<td>2026-W44</td><td>88%</td>" in page
 
     def test_bad_progress_from_the_page_is_flashed(self, client, enrolled):
