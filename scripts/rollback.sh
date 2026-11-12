@@ -3,7 +3,7 @@
 #
 #   scripts/rollback.sh <strategy> [image]
 #
-#   rolling     undo to the previous revision, or set the given image
+#   rolling     back to the last stable revision, or to the given image
 #   blue-green  move live traffic back to the standby slot
 #   canary      weight 0 + retire the canary; with an image, also reset stable
 #   ab-testing  end the experiment: remove variant B's route
@@ -27,11 +27,50 @@ answers() {     # answers <host> <path>: HTTP 200 within a few tries
   return 1
 }
 
+version_of() {  # .../aceest-fitness:3.2.4-926e56a -> 3.2.4
+  local tag=${1##*:}
+  echo "${tag%%-*}"
+}
+
+# "rollout undo" goes to the previous revision, and after an automatic rollback
+# that is the build that just failed. Take the newest revision that runs a
+# different image, has no drill fault and was not marked failed by a release.
+last_stable_revision() {   # last_stable_revision <deployment> -> "<revision> <image>"
+  local jp='{range .items[?(@.metadata.ownerReferences[0].name=="DEPLOY")]}{.metadata.annotations.deployment\.kubernetes\.io/revision}|{.spec.template.spec.containers[0].image}|{.spec.template.spec.containers[0].env[?(@.name=="ACEEST_FAULT")].value}|{.metadata.annotations.aceest/failed}{"\n"}{end}'
+  kc get rs -o jsonpath="${jp//DEPLOY/$1}" | sort -t'|' -k1,1rn |
+    awk -F'|' -v current="$(current_image "$1")" '$2 != current && $3 == "" && $4 == "" {print $1, $2; exit}'
+}
+
+# ingress-nginx applies selector and endpoint changes a few seconds later, so
+# wait until the host really serves what the rollback asked for.
+verify() {      # verify <host> <expected version or track> [curl args...]
+  local host=$1 expect=$2 code track version
+  shift 2
+  for _ in $(seq 1 30); do
+    read -r code track version _ < <(probe "$host" "$@") || true
+    if [ "$code" = 200 ] && { [ "$expect" = "$version" ] || [ "$expect" = "$track" ]; }; then
+      log "now serving: $code $track $version"
+      return 0
+    fi
+    sleep 1
+  done
+  fail "$host answers '${code:-} ${track:-} ${version:-}', expected $expect"
+}
+
 case "$STRATEGY" in
   rolling)
     NAMESPACE=aceest-rolling
-    if [ -n "$TARGET" ]; then set_image aceest; else kc rollout undo deployment/aceest; rollout_ok aceest; fi
-    host=rolling.aceest.localhost
+    if [ -z "$TARGET" ]; then
+      read -r revision TARGET < <(last_stable_revision aceest) || true
+      [ -n "$TARGET" ] || fail "no earlier revision with a different, healthy image"
+      log "going back to revision $revision (${TARGET##*/})"
+      kc rollout undo deployment/aceest --to-revision="$revision"
+      kc annotate deployment/aceest kubernetes.io/change-cause="rollback to ${TARGET##*/}" --overwrite
+      rollout_ok aceest
+    else
+      set_image aceest
+    fi
+    verify rolling.aceest.localhost "$(version_of "$TARGET")"
     ;;
   blue-green)
     NAMESPACE=aceest-bluegreen
@@ -49,31 +88,37 @@ case "$STRATEGY" in
     export ACTIVE_SLOT=$standby PREVIEW_SLOT=$live
     apply_template "$K8S_DIR/blue-green/services.yaml"
     log "live traffic moved $live -> $standby ($(current_image "aceest-$standby"))"
-    host=bluegreen.aceest.localhost
+    verify bluegreen.aceest.localhost "$standby"
     ;;
   canary)
     NAMESPACE=aceest-canary
     export WEIGHT=0
     apply_template "$K8S_DIR/canary/ingress-canary.yaml"
     kc scale deployment/aceest-canary --replicas=0
-    [ -z "$TARGET" ] || set_image aceest-stable
-    host=canary.aceest.localhost
+    if [ -n "$TARGET" ]; then
+      set_image aceest-stable
+      verify canary.aceest.localhost "$(version_of "$TARGET")" -H "X-Canary: always"
+    else
+      verify canary.aceest.localhost stable -H "X-Canary: always"
+    fi
     ;;
   ab-testing)
     NAMESPACE=aceest-ab
     kc delete -f "$K8S_DIR/ab-testing/ingress-variant-b.yaml" --ignore-not-found
-    host=ab.aceest.localhost
+    kc annotate deployment/aceest-b aceest/experiment=failed --overwrite >/dev/null
+    verify ab.aceest.localhost variant-a -H "X-Variant: B"
     ;;
   shadow)
     NAMESPACE=aceest-shadow
     kc scale deployment/aceest-shadow --replicas=0
-    [ -z "$TARGET" ] || set_image aceest-live
-    host=shadow.aceest.localhost
+    if [ -n "$TARGET" ]; then
+      set_image aceest-live
+      verify shadow.aceest.localhost "$(version_of "$TARGET")"
+    else
+      verify shadow.aceest.localhost live
+    fi
     ;;
   *)
     fail "unknown strategy '$STRATEGY'"
     ;;
 esac
-
-sleep 2
-log "now serving: $(probe "$host")"
