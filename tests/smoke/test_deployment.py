@@ -108,3 +108,9 @@ def test_metrics_endpoint_reports_the_build():
     assert "aceest_build_info" in text
     if EXPECTED_VERSION:
         assert f'version="{EXPECTED_VERSION}"' in text
+
+
+def test_membership_plans_are_listed():
+    status, text = call("/api/membership/plans")
+    assert status == 200
+    assert [plan["code"] for plan in json.loads(text)["plans"]] == ["monthly", "quarterly", "annual"]
