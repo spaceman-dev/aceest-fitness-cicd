@@ -54,6 +54,9 @@
       <label>Target adherence (%)
         <input type="number" name="target_adherence" min="0" max="100" value="{{ form.target_adherence or '' }}">
       </label>
+      <label>Membership ends
+        <input type="date" name="membership_end" value="{{ form.membership_end or '' }}">
+      </label>
       <label>Coach notes
         <input type="text" name="notes" maxlength="280" value="{{ form.notes or '' }}">
       </label>
@@ -100,7 +103,7 @@ BREAK-EVEN: {{ metrics.break_even_members }} Members</pre>
     {% if clients %}
       <table class="roster">
         <thead>
-          <tr><th>Name</th><th>Age</th><th>Weight</th><th>BMI</th><th>Program</th><th>Adherence</th><th>Notes</th></tr>
+          <tr><th>Name</th><th>Age</th><th>Weight</th><th>BMI</th><th>Program</th><th>Adherence</th><th>Membership</th><th>Notes</th></tr>
         </thead>
         <tbody>
           {% for client in clients %}
@@ -111,6 +114,7 @@ BREAK-EVEN: {{ metrics.break_even_members }} Members</pre>
               <td>{{ client.bmi or '-' }}</td>
               <td>{{ client.program }}</td>
               <td>{{ client.adherence }}%</td>
+              <td>{{ client.membership_status }}</td>
               <td>{{ client.notes }}</td>
             </tr>
           {% endfor %}
