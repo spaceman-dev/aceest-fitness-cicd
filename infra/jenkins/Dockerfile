@@ -29,13 +29,16 @@ COPY --from=docker:29-cli /usr/local/bin/docker /usr/local/bin/docker
 COPY --from=docker:29-cli /usr/local/libexec/docker/cli-plugins/docker-buildx \
      /usr/local/libexec/docker/cli-plugins/docker-buildx
 
+# SonarQube's CSS/HTML analysers run on Node and refuse Debian's older nodejs
+COPY --from=node:24-slim /usr/local/bin/node /usr/local/bin/node
+
 RUN arch="$(dpkg --print-architecture)" \
     && curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors -o /usr/local/bin/kubectl \
         "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${arch}/kubectl" \
     && chmod 0755 /usr/local/bin/kubectl
 
-# Same scanner version as the Jenkins lab sheet; the plain zip runs on the
-# image's own JDK so it works on both amd64 and arm64 hosts.
+# Same scanner version as the Jenkins lab sheet. The plain zip runs on the
+# image's own JDK, so it works on amd64 and arm64 hosts alike.
 RUN curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors -o /tmp/scanner.zip \
         "https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${SONAR_SCANNER_VERSION}.zip" \
     && unzip -q /tmp/scanner.zip -d /opt \
