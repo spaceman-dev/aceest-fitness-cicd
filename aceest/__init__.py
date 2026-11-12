@@ -5,15 +5,15 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from flask import Flask, jsonify, request
+from flask import Flask, g, jsonify, request
 from flask_wtf.csrf import CSRFProtect
 from werkzeug.exceptions import HTTPException
 
-from . import db, observability
+from . import auth, db, observability
 from .config import get_config
 from .errors import ACEestError
 
-__version__ = "3.0.1"
+__version__ = "3.1.2"
 
 csrf = CSRFProtect()
 
@@ -28,8 +28,10 @@ def create_app(config_name: str | None = None,
     app.json.sort_keys = False
 
     db.init_app(app)
+    auth.seed_admin(app)
     csrf.init_app(app)
     observability.init_app(app)
+    app.before_request(auth.load_user)
     _register_blueprints(app)
     _register_error_handlers(app)
     _register_release_info(app)
@@ -38,12 +40,14 @@ def create_app(config_name: str | None = None,
 
 def _register_blueprints(app: Flask) -> None:
     from .routes.api import api_bp
+    from .routes.auth import auth_bp
     from .routes.web import web_bp
 
     # The JSON API takes no cookies and only JSON bodies, which a cross-site
     # form cannot send, so CSRF tokens apply to the HTML forms only.
     csrf.exempt(api_bp)
     app.register_blueprint(api_bp)
+    app.register_blueprint(auth_bp)
     app.register_blueprint(web_bp)
 
 
@@ -61,8 +65,9 @@ def _register_release_info(app: Flask) -> None:
         return response
 
     @app.context_processor
-    def inject_release() -> dict[str, str]:
-        return {"app_version": __version__, "app_track": app.config["TRACK"]}
+    def inject_release() -> dict[str, Any]:
+        return {"app_version": __version__, "app_track": app.config["TRACK"],
+                "current_user": g.get("user")}
 
 
 def _wants_json() -> bool:

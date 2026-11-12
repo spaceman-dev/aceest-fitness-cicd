@@ -83,6 +83,19 @@ MIGRATIONS: list[tuple[int, list[str]]] = [
         )
         """,
     ]),
+    (4, [
+        # 3.1.2: staff logins with roles, and when each membership runs out
+        """
+        CREATE TABLE IF NOT EXISTS users (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            username      TEXT    NOT NULL UNIQUE COLLATE NOCASE,
+            password_hash TEXT    NOT NULL,
+            role          TEXT    NOT NULL CHECK (role IN ('Admin', 'Coach')),
+            created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
+        )
+        """,
+        "ALTER TABLE clients ADD COLUMN membership_end TEXT",
+    ]),
 ]
 
 
@@ -163,7 +176,7 @@ def find_client(name: str) -> dict[str, Any] | None:
 
 
 CLIENT_FIELDS = ("name", "age", "height_cm", "weight_kg", "program", "calories", "adherence",
-                 "notes", "target_weight_kg", "target_adherence")
+                 "notes", "target_weight_kg", "target_adherence", "membership_end")
 
 
 def _client_values(profile: Mapping[str, Any]) -> tuple[Any, ...]:
@@ -175,8 +188,8 @@ def insert_client(profile: Mapping[str, Any]) -> dict[str, Any]:
     cursor = db.execute(
         """
         INSERT INTO clients (name, age, height_cm, weight_kg, program, calories, adherence,
-                             notes, target_weight_kg, target_adherence)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                             notes, target_weight_kg, target_adherence, membership_end)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         _client_values(profile),
     )
@@ -190,7 +203,8 @@ def update_client(client_id: int, profile: Mapping[str, Any]) -> dict[str, Any]:
         """
         UPDATE clients
            SET name = ?, age = ?, height_cm = ?, weight_kg = ?, program = ?, calories = ?,
-               adherence = ?, notes = ?, target_weight_kg = ?, target_adherence = ?
+               adherence = ?, notes = ?, target_weight_kg = ?, target_adherence = ?,
+               membership_end = ?
          WHERE id = ?
         """,
         (*_client_values(profile), client_id),
@@ -272,3 +286,33 @@ def insert_metrics(client_id: int, entry: Mapping[str, Any]) -> dict[str, Any]:
 
 def list_metrics(client_id: int) -> list[dict[str, Any]]:
     return _all("SELECT * FROM metrics WHERE client_id = ? ORDER BY date, id", (client_id,))
+
+
+# -------------------------------------------------------------------- users
+
+
+def count_users() -> int:
+    return get_db().execute("SELECT COUNT(*) FROM users").fetchone()[0]
+
+
+def find_user(username: str) -> dict[str, Any] | None:
+    return _one("SELECT * FROM users WHERE username = ?", (username,))
+
+
+def find_user_by_id(user_id: int) -> dict[str, Any] | None:
+    return _one("SELECT * FROM users WHERE id = ?", (user_id,))
+
+
+def insert_user(username: str, password_hash: str, role: str) -> dict[str, Any]:
+    db = get_db()
+    cursor = db.execute(
+        "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
+        (username, password_hash, role),
+    )
+    db.commit()
+    return _one("SELECT id, username, role, created_at FROM users WHERE id = ?",
+                (cursor.lastrowid,))
+
+
+def list_users() -> list[dict[str, Any]]:
+    return _all("SELECT id, username, role, created_at FROM users ORDER BY username")

@@ -243,6 +243,23 @@ def summarise_adherence(entries: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
     }
 
 
+EXPIRY_WARNING_DAYS = 14
+
+
+def membership_status(end: str | None, today: date | None = None) -> dict[str, Any]:
+    """Active / Expiring soon / Expired from the membership end date."""
+    if not end:
+        return {"membership_status": "Not set", "days_left": None}
+    days_left = (date.fromisoformat(end) - (today or date.today())).days
+    if days_left < 0:
+        status = "Expired"
+    elif days_left <= EXPIRY_WARNING_DAYS:
+        status = "Expiring soon"
+    else:
+        status = "Active"
+    return {"membership_status": status, "days_left": days_left}
+
+
 def capacity_used_pct(active_clients: int) -> float:
     return round(active_clients / SITE_METRICS["capacity_users"] * 100, 1)
 
@@ -272,6 +289,8 @@ def build_profile(payload: Mapping[str, Any]) -> dict[str, Any]:
         "notes": validate_notes(payload.get("notes")),
         "target_weight_kg": _optional(payload, "target_weight_kg", validate_weight_kg),
         "target_adherence": _optional(payload, "target_adherence", validate_adherence),
+        "membership_end": _optional(payload, "membership_end",
+                                    lambda value: validate_iso_date(value, "membership_end")),
     }
 
 
@@ -283,4 +302,5 @@ def describe_client(client: Mapping[str, Any]) -> dict[str, Any]:
     described["program_notes"] = program.get("description", "")
     if client.get("height_cm"):
         described.update(bmi_report(client["weight_kg"], client["height_cm"]))
+    described.update(membership_status(client.get("membership_end")))
     return described

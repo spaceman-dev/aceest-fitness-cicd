@@ -3,6 +3,19 @@
 Versions follow the numbering of the original ACEest desktop builds
 (`Aceestver-X.Y.Z.py`); each one is ported to the Flask app and tagged `vX.Y.Z`.
 
+## 3.1.2
+
+- Staff sign-in with Admin and Coach roles; Admins manage accounts at
+  `/users` and `POST /api/users`. No default password: the first Admin is
+  created from `ACEEST_ADMIN_PASSWORD`.
+- Client pages need a session; `/api/clients/*` needs a session or HTTP
+  Basic credentials (401 otherwise). Health, programs, calculators, stats
+  and metrics stay public.
+- Membership end date with Active / Expiring soon / Expired status.
+- Weekly program generator (beginner 3 days, intermediate 4, advanced 5),
+  stable for a client within a week: `GET /api/clients/<name>/program`.
+- PDF client report: `/clients/<name>/report.pdf`.
+
 ## 3.0.1
 
 The desktop 3.0.1 build is the same code as 2.2.4. The web app uses the

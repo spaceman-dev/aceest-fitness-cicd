@@ -4,10 +4,24 @@ from __future__ import annotations
 
 from typing import Any
 
-from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from datetime import date
+
+from flask import (
+    Blueprint,
+    Response,
+    abort,
+    flash,
+    g,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 
 from .. import db
 from ..errors import ACEestError, NotFoundError
+from ..generator import LEVELS, generate_program
+from ..reports import client_report
 from ..programs import SITE_METRICS, WORKOUT_TYPES, get_program, list_programs
 from ..services import (
     build_profile,
@@ -22,6 +36,13 @@ from ..services import (
 )
 
 web_bp = Blueprint("web", __name__)
+
+
+@web_bp.before_request
+def require_login() -> Any:
+    if g.get("user") is None:
+        return redirect(url_for("auth.login", next=request.full_path.rstrip("?")))
+    return None
 
 
 def _dashboard(**context: Any) -> str:
@@ -82,6 +103,13 @@ def client_detail(name: str) -> Any:
     client = _client_or_404(name)
     progress = db.list_progress(client["id"])
     metrics = db.list_metrics(client["id"])
+    plan = None
+    experience = request.args.get("experience")
+    if experience:
+        try:
+            plan = generate_program(client["name"], client["program"], experience, current_week())
+        except ACEestError as error:
+            flash(error.message, "error")
     return render_template(
         "client.html",
         client=describe_client(client),
@@ -91,8 +119,21 @@ def client_detail(name: str) -> Any:
         last_metrics=metrics[-1] if metrics else None,
         workouts=db.list_workouts(client["id"]),
         workout_types=WORKOUT_TYPES,
+        levels=list(LEVELS),
+        plan=plan,
         week=current_week(),
     )
+
+
+@web_bp.get("/clients/<name>/report.pdf")
+def client_pdf(name: str) -> Any:
+    client = _client_or_404(name)
+    pdf = client_report(describe_client(client),
+                        summarise_adherence(db.list_progress(client["id"])),
+                        db.list_workouts(client["id"]), date.today().isoformat())
+    filename = client["name"].replace(" ", "_") + "_report.pdf"
+    return Response(pdf, mimetype="application/pdf",
+                    headers={"Content-Disposition": f"attachment; filename={filename}"})
 
 
 @web_bp.post("/clients/<name>/progress")

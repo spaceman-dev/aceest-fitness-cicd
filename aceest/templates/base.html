@@ -10,9 +10,19 @@
   <header class="masthead">
     <a class="brand" href="{{ url_for('web.dashboard') }}">ACEest FUNCTIONAL FITNESS SYSTEM</a>
     <nav>
-      <a href="{{ url_for('web.dashboard') }}">Dashboard</a>
+      {% if current_user %}
+        <a href="{{ url_for('web.dashboard') }}">Dashboard</a>
+        {% if current_user.role == 'Admin' %}<a href="{{ url_for('auth.users') }}">Users</a>{% endif %}
+      {% endif %}
       <a href="{{ url_for('api.stats') }}">API</a>
       <a href="{{ url_for('api.health') }}">Health</a>
+      {% if current_user %}
+        <form class="inline" method="post" action="{{ url_for('auth.logout') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <span class="who">{{ current_user.username }} ({{ current_user.role }})</span>
+          <button type="submit" class="link-button">Sign out</button>
+        </form>
+      {% endif %}
     </nav>
   </header>
 
