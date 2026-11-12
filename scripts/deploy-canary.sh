@@ -8,7 +8,7 @@ STRATEGY=canary
 NAMESPACE=aceest-canary
 HOST=canary.aceest.localhost
 CANARY_STEPS=${CANARY_STEPS:-"10 30 60"}
-CANARY_SAMPLES=${CANARY_SAMPLES:-40}
+CANARY_SAMPLES=${CANARY_SAMPLES:-50}
 source "$(dirname "$0")/lib.sh"
 require_release
 
@@ -51,7 +51,16 @@ smoke "$HOST" "X-Canary: always" || abort "canary failed its smoke tests"
 for weight in $CANARY_STEPS; do
   export WEIGHT=$weight
   apply_template "$K8S_DIR/canary/ingress-canary.yaml"
-  sleep 3   # give ingress-nginx time to reload the upstream weights
+  # ingress-nginx applies weight changes on its next sync, which is rate
+  # limited and shared with every other ingress being changed at the same
+  # time - give it a moment, then make sure the canary is really in rotation
+  # before measuring anything.
+  sleep 5
+  for _ in $(seq 1 40); do
+    read -r _ track _ _ < <(probe "$HOST") || true
+    [ "$track" = canary ] && break
+    sleep 0.5
+  done
   served=0
   errors=0
   for _ in $(seq 1 "$CANARY_SAMPLES"); do
@@ -62,7 +71,7 @@ for weight in $CANARY_STEPS; do
   restarts=$(kc get pods -l track=canary \
     -o jsonpath='{range .items[*]}{.status.containerStatuses[0].restartCount}{"\n"}{end}' \
     | awk '{n += $1} END {print n + 0}')
-  log "weight ${weight}%: canary served $served/$CANARY_SAMPLES requests, errors=$errors, restarts=$restarts"
+  log "weight ${weight}%: canary served $served/$CANARY_SAMPLES requests ($((served * 100 / CANARY_SAMPLES))%), errors=$errors, restarts=$restarts"
   [ "$errors" -eq 0 ] || abort "errors at ${weight}% traffic"
   [ "$restarts" -eq 0 ] || abort "canary pod restarted"
 done
