@@ -13,7 +13,7 @@ from . import auth, db, observability
 from .config import get_config
 from .errors import ACEestError
 
-__version__ = "3.0.1"
+__version__ = "3.1.2"
 
 csrf = CSRFProtect()
 
