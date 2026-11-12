@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aceest-fitness"
+dynamic = ["version"]
+description = "ACEest Fitness & Gym management service (Flask)"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["Flask>=3.1", "gunicorn>=23"]
+
+[tool.setuptools]
+py-modules = ["ACEest_Fitness"]
+
+[tool.setuptools.packages.find]
+include = ["aceest*"]
+
+[tool.setuptools.package-data]
+aceest = ["templates/*.html", "static/css/*.css"]
+
+[tool.setuptools.dynamic]
+version = { attr = "aceest.__version__" }

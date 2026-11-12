@@ -1,0 +1,14 @@
+configuration-as-code
+job-dsl
+workflow-aggregator
+git
+basic-branch-build-strategies
+pipeline-stage-view
+pipeline-graph-view
+credentials-binding
+sonar
+junit
+coverage
+pipeline-utility-steps
+timestamper
+ws-cleanup
