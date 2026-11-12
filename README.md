@@ -46,10 +46,16 @@ docker run -p 5000:5000 aceest-fitness
 | GET | `/api/clients/<name>/metrics/chart.svg` | weight trend chart |
 | GET | `/api/clients/<name>/program?experience=beginner` | weekly program |
 | GET | `/api/clients/<name>/report.pdf` | PDF client report |
+| GET | `/api/membership/plans` | membership plans and payment methods |
+| GET | `/api/clients/<name>/membership` | end date, status and payment history |
+| POST | `/api/clients/<name>/membership/renew` | `{"plan": "quarterly", "method": "UPI"}` -> payment + new end date |
+| GET | `/api/memberships/expiring` | memberships ending in the next 14 days |
+| PUT | `/api/clients/<name>/template` | `{"template": "Full Body HIIT"}` -> assign a program template |
 | GET, POST | `/api/users` | staff accounts (Admin only) |
 
-Everything under `/api/clients` and `/api/users` needs a signed-in session or
-HTTP Basic credentials, e.g. `curl -u admin:<password> .../api/clients`.
+Everything under `/api/clients`, `/api/memberships` and `/api/users` needs a
+signed-in session or HTTP Basic credentials, e.g.
+`curl -u admin:<password> .../api/clients`.
 
 Every response carries `X-ACEest-Version` and `X-ACEest-Track` headers so it is
 always clear which build answered.
