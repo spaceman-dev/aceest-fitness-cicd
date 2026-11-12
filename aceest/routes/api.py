@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import sqlite3
+from collections import Counter
 from collections.abc import Mapping
 from typing import Any
 
@@ -11,11 +13,12 @@ from .. import db
 from ..charts import line_chart
 from ..errors import ConflictError, NotFoundError, ValidationError
 from ..exports import clients_to_csv
-from ..programs import SITE_METRICS, get_program, list_programs
+from ..programs import SITE_METRICS, WORKOUT_TYPES, get_program, list_programs
 from ..services import (
     bmi_report,
     build_profile,
     calculate_calories,
+    capacity_used_pct,
     describe_client,
     require,
     summarise_adherence,
@@ -41,12 +44,19 @@ def _json_body() -> Mapping[str, Any]:
 def health() -> Any:
     from .. import __version__
 
+    try:
+        db.get_db().execute("SELECT 1").fetchone()
+        database = "ok"
+    except sqlite3.Error:
+        database = "unavailable"
+    healthy = database == "ok"
     return jsonify({
-        "status": "healthy",
+        "status": "healthy" if healthy else "unhealthy",
         "service": "aceest-fitness",
         "version": __version__,
         "track": current_app.config["TRACK"],
-    })
+        "checks": {"database": database},
+    }), (200 if healthy else 503)
 
 
 @api_bp.get("/programs")
@@ -63,9 +73,20 @@ def program_detail(code: str) -> Any:
     return jsonify(program)
 
 
-@api_bp.get("/site")
-def site() -> Any:
-    return jsonify(SITE_METRICS)
+@api_bp.get("/stats")
+def stats() -> Any:
+    clients = db.list_clients()
+    total = len(clients)
+    return jsonify({
+        "total_clients": total,
+        "clients_by_program": dict(Counter(client["program"] for client in clients)),
+        "average_calorie_target": (
+            round(sum(client["calories"] for client in clients) / total, 1) if total else 0.0
+        ),
+        "capacity_used_pct": capacity_used_pct(total),
+        "site_metrics": SITE_METRICS,
+        "workout_types": list(WORKOUT_TYPES),
+    })
 
 
 @api_bp.post("/calories")
@@ -86,12 +107,6 @@ def calories() -> Any:
 def bmi() -> Any:
     body = _json_body()
     return jsonify(bmi_report(require(body, "weight_kg"), require(body, "height_cm")))
-
-
-@api_bp.post("/profile")
-def profile() -> Any:
-    """Validate a client profile and return it with its calorie estimate."""
-    return jsonify(build_profile(_json_body()))
 
 
 def _client_or_404(name: str) -> dict[str, Any]:

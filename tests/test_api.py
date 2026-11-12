@@ -46,10 +46,6 @@ def test_unknown_api_route_answers_in_json(client):
     assert response.is_json
 
 
-def test_site_metrics(client):
-    assert client.get("/api/site").get_json()["capacity_users"] == 150
-
-
 def test_calorie_estimate(client):
     response = client.post("/api/calories", json={"weight_kg": 80, "program": "mg"})
     assert response.status_code == 200
@@ -77,22 +73,6 @@ def test_non_json_body_is_rejected(client):
     assert response.get_json()["message"] == "request body must be a JSON object"
 
 
-def test_profile_endpoint(client, profile_payload):
-    body = client.post("/api/profile", json=profile_payload).get_json()
-    assert body["calories"] == 2800
-    assert body["program_name"] == "Muscle Gain (MG) - PPL"
-    assert body["adherence"] == 85
-
-
-def test_profile_endpoint_reports_the_failing_field(client, profile_payload):
-    profile_payload["age"] = 7
-    response = client.post("/api/profile", json=profile_payload)
-    assert response.status_code == 400
-    assert response.get_json() == {
-        "error": "ValidationError", "message": "'age' must be between 10 and 100", "field": "age",
-    }
-
-
 def test_bmi_report(client):
     body = client.post("/api/bmi", json={"weight_kg": 80, "height_cm": 180}).get_json()
     assert body == {"bmi": 24.7, "category": "Normal", "risk": "Low risk if active and strong."}
@@ -102,3 +82,8 @@ def test_bmi_needs_height(client):
     response = client.post("/api/bmi", json={"weight_kg": 80})
     assert response.status_code == 400
     assert response.get_json()["field"] == "height_cm"
+
+
+def test_retired_1x_endpoints_are_gone(client, profile_payload):
+    assert client.post("/api/profile", json=profile_payload).status_code == 404
+    assert client.get("/api/site").status_code == 404

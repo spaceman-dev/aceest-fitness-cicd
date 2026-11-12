@@ -12,6 +12,8 @@ class BaseConfig:
     TRACK = os.environ.get("ACEEST_TRACK", "local")
     # SQLite file; the container points this at the /data volume
     DATABASE = os.environ.get("ACEEST_DB", "aceest_fitness.db")
+    # rollback drills only: "unhealthy" or "errors" (see aceest/observability.py)
+    FAULT = os.environ.get("ACEEST_FAULT", "").strip().lower()
     TESTING = False
     DEBUG = False
 
