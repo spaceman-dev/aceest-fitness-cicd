@@ -39,6 +39,7 @@ docker run -p 5000:5000 aceest-fitness
 | GET | `/api/clients/export.csv` | roster as CSV |
 | GET, PUT | `/api/clients/<name>` | one client with progress; PUT updates and recomputes |
 | GET, POST | `/api/clients/<name>/progress` | weekly adherence (`{"week": "2026-W46", "adherence": 80}`) |
+| GET | `/api/clients/<name>/progress/chart.svg` | adherence chart |
 
 Every response carries `X-ACEest-Version` and `X-ACEest-Track` headers so it is
 always clear which build answered.
