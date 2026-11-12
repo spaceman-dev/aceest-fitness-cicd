@@ -11,7 +11,7 @@ from datetime import date, datetime
 from typing import Any
 
 from .errors import ValidationError
-from .programs import SITE_METRICS, WORKOUT_TYPES, get_program
+from .programs import SITE_METRICS, WORKOUT_TYPES, get_program, templates_for
 
 NAME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z .'\-]{1,49}$")
 WEEK_PATTERN = re.compile(r"^(\d{4})-W(\d{2})$")
@@ -260,6 +260,28 @@ def membership_status(end: str | None, today: date | None = None) -> dict[str, A
     return {"membership_status": status, "days_left": days_left}
 
 
+def expiring_soon(clients: Iterable[Mapping[str, Any]],
+                  today: date | None = None) -> list[dict[str, Any]]:
+    """Clients whose membership ends within the warning window, soonest first."""
+    soon = []
+    for client in clients:
+        status = membership_status(client.get("membership_end"), today)
+        if status["membership_status"] == "Expiring soon":
+            soon.append({"name": client["name"], "membership_end": client["membership_end"],
+                         "days_left": status["days_left"]})
+    return sorted(soon, key=lambda item: item["days_left"])
+
+
+def validate_template(program_code: str, value: Any) -> str | None:
+    if value is None or value == "":
+        return None
+    options = templates_for(program_code)
+    for option in options:
+        if str(value).strip().lower() == option.lower():
+            return option
+    raise ValidationError(f"'template' must be one of {', '.join(options)}", field="template")
+
+
 def capacity_used_pct(active_clients: int) -> float:
     return round(active_clients / SITE_METRICS["capacity_users"] * 100, 1)
 
@@ -300,6 +322,7 @@ def describe_client(client: Mapping[str, Any]) -> dict[str, Any]:
     program = get_program(client["program"]) or {}
     described["program_name"] = program.get("name", client["program"])
     described["program_notes"] = program.get("description", "")
+    described["template_options"] = list(templates_for(client["program"]))
     if client.get("height_cm"):
         described.update(bmi_report(client["weight_kg"], client["height_cm"]))
     described.update(membership_status(client.get("membership_end")))

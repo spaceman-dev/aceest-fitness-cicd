@@ -3,6 +3,20 @@
 Versions follow the numbering of the original ACEest desktop builds
 (`Aceestver-X.Y.Z.py`); each one is ported to the Flask app and tagged `vX.Y.Z`.
 
+## 3.2.4
+
+- Membership plans (Monthly 30 days / Rs 2500, Quarterly 90 / Rs 6500,
+  Annual 365 / Rs 24000) paid by Cash, Card or UPI. A renewal starts the day
+  after the current end date, or today if the membership has already
+  lapsed, so renewing early keeps the remaining days.
+- Payment history per client; payment and new end date are saved together.
+- Dashboard list of memberships ending in the next 14 days, also at
+  `GET /api/memberships/expiring`.
+- Program templates from the desktop build (e.g. "Full Body HIIT" or
+  "Circuit Training" for the fat-loss programs); one can be assigned per
+  client.
+- Canary releases sample 100 requests per step instead of 50.
+
 ## 3.1.2
 
 - Staff sign-in with Admin and Coach roles; Admins manage accounts at
