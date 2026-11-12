@@ -57,6 +57,14 @@ current_image() {
   kc get deployment "$1" -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || true
 }
 
+# ReplicaSet behind the deployment's current revision
+current_rs() {   # current_rs <deployment>
+  local revision
+  revision=$(kc get deployment "$1" -o jsonpath='{.metadata.annotations.deployment\.kubernetes\.io/revision}')
+  kc get rs -o jsonpath='{range .items[*]}{.metadata.ownerReferences[0].name}|{.metadata.annotations.deployment\.kubernetes\.io/revision}|{.metadata.name}{"\n"}{end}' |
+    awk -F'|' -v d="$1" -v r="$revision" '$1 == d && $2 == r {print $3}'
+}
+
 # Pytest smoke suite from the test image, run in a container against the ingress.
 #   smoke <host> [header]     e.g. smoke canary.aceest.localhost "X-Canary: always"
 smoke() {
