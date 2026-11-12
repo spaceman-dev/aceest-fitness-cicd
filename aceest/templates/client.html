@@ -7,35 +7,129 @@
     <h2>Client Summary</h2>
     <pre class="summary-block">CLIENT PROFILE
 --------------
-Name     : {{ client.name }}
-Age      : {{ client.age }}
-Weight   : {{ client.weight_kg }} kg
-Program  : {{ program.name if program else client.program }}
-Calories : {{ client.calories }} kcal/day</pre>
+Name      : {{ client.name }}
+Age       : {{ client.age }}
+Height    : {{ client.height_cm or '-' }} cm
+Weight    : {{ client.weight_kg }} kg
+Program   : {{ client.program_name }}
+Calories  : {{ client.calories }} kcal/day
+
+PROGRAM NOTES
+-------------
+{{ client.program_notes }}
+
+GOALS
+-----
+Target weight     : {{ client.target_weight_kg or '-' }} kg
+Target adherence  : {{ client.target_adherence or '-' }}%
+
+PROGRESS SUMMARY
+----------------
+Weeks logged       : {{ summary.weeks_logged }}
+Average adherence  : {{ summary.average_adherence }}%
+Trend              : {{ summary.trend }}
+
+LAST BODY METRICS
+-----------------
+{% if last_metrics %}{{ last_metrics.date }} | {{ last_metrics.weight_kg or '-' }} kg, Waist {{ last_metrics.waist_cm or '-' }} cm, Bodyfat {{ last_metrics.bodyfat_pct or '-' }}%{% else %}None{% endif %}</pre>
     {% if client.notes %}
       <p class="muted">Coach notes: {{ client.notes }}</p>
     {% endif %}
     <p><a class="button-link" href="{{ url_for('web.dashboard') }}">&larr; Back to dashboard</a></p>
   </div>
 
+  <div>
+    <div class="card">
+      <h2>BMI &amp; Risk</h2>
+      {% if client.bmi %}
+        <p class="calories">BMI {{ client.bmi }} ({{ client.category }})</p>
+        <p class="muted">Risk note: {{ client.risk }}</p>
+      {% else %}
+        <p class="empty">Add the client's height to see BMI and risk.</p>
+      {% endif %}
+    </div>
+    <div class="card">
+      <h2>Save Weekly Progress</h2>
+      <form method="post" action="{{ url_for('web.save_progress', name=client.name) }}" class="stack">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label>Week
+          <input type="text" name="week" value="{{ week }}" required>
+        </label>
+        <label>Adherence (%)
+          <input type="number" name="adherence" min="0" max="100" value="80" required>
+        </label>
+        <button type="submit">Save Progress</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<section class="split">
   <div class="card">
-    <h2>Save Weekly Progress</h2>
-    <form method="post" action="{{ url_for('web.save_progress', name=client.name) }}" class="stack">
+    <h2>Log Workout</h2>
+    <form method="post" action="{{ url_for('web.save_workout', name=client.name) }}" class="stack">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <label>Week
-        <input type="text" name="week" value="{{ week }}" required>
+      <label>Date <input type="date" name="date"></label>
+      <label>Workout type
+        <select name="workout_type">
+          {% for kind in workout_types %}<option>{{ kind }}</option>{% endfor %}
+        </select>
       </label>
-      <label>Adherence (%)
-        <input type="number" name="adherence" min="0" max="100" value="80" required>
-      </label>
-      <button type="submit">Save Progress</button>
+      <label>Duration (min) <input type="number" name="duration_min" min="1" max="480" value="60" required></label>
+      <label>Notes <input type="text" name="notes" maxlength="280"></label>
+      <label>Exercise <input type="text" name="exercise_name" maxlength="60" placeholder="Back Squat"></label>
+      <div class="inline-fields">
+        <label>Sets <input type="number" name="exercise_sets" min="1" max="20" value="3"></label>
+        <label>Reps <input type="number" name="exercise_reps" min="1" max="100" value="10"></label>
+        <label>Weight (kg) <input type="number" name="exercise_weight_kg" min="0" max="500" step="0.5" value="0"></label>
+      </div>
+      <button type="submit">Save Workout</button>
+    </form>
+  </div>
+  <div class="card">
+    <h2>Log Body Metrics</h2>
+    <form method="post" action="{{ url_for('web.save_metrics', name=client.name) }}" class="stack">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label>Date <input type="date" name="date"></label>
+      <label>Weight (kg) <input type="number" name="weight_kg" step="0.1" min="25" max="300" value="{{ client.weight_kg }}"></label>
+      <label>Waist (cm) <input type="number" name="waist_cm" step="0.1" min="40" max="250"></label>
+      <label>Bodyfat (%) <input type="number" name="bodyfat_pct" step="0.1" min="2" max="70"></label>
+      <button type="submit">Save Metrics</button>
     </form>
   </div>
 </section>
 
+<section class="split">
+  <div class="card">
+    <h2>Adherence chart</h2>
+    <img class="chart" src="{{ url_for('api.progress_chart', name=client.name) }}" alt="Weekly adherence chart for {{ client.name }}">
+  </div>
+  <div class="card">
+    <h2>Weight trend</h2>
+    <img class="chart" src="{{ url_for('api.weight_chart', name=client.name) }}" alt="Weight trend chart for {{ client.name }}">
+  </div>
+</section>
+
 <section class="card">
-  <h2>Adherence chart</h2>
-  <img class="chart" src="{{ url_for('api.progress_chart', name=client.name) }}" alt="Weekly adherence chart for {{ client.name }}">
+  <h2>Workout history</h2>
+  {% if workouts %}
+    <table class="roster">
+      <thead><tr><th>Date</th><th>Type</th><th>Duration (min)</th><th>Exercises</th><th>Notes</th></tr></thead>
+      <tbody>
+        {% for workout in workouts %}
+          <tr>
+            <td>{{ workout.date }}</td>
+            <td>{{ workout.workout_type }}</td>
+            <td>{{ workout.duration_min }}</td>
+            <td>{% for e in workout.exercises %}{{ e.name }} {{ e.sets }}x{{ e.reps }}{% if e.weight_kg %} @ {{ e.weight_kg }} kg{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+            <td>{{ workout.notes }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="empty">No sessions logged yet.</p>
+  {% endif %}
 </section>
 
 <section class="card">

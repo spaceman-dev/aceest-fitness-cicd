@@ -131,3 +131,4 @@ table.roster a { color: var(--gold); text-decoration: none; }
 .calories { font-size: 1.1rem; font-weight: 700; color: var(--gold); margin: 0 0 1.5rem; }
 .summary-block { background: var(--surface-2); padding: 0.9rem 1rem; border-radius: 6px; font-size: 0.85rem; }
 .chart { width: 100%; max-width: 720px; display: block; border-radius: 6px; }
+.inline-fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }

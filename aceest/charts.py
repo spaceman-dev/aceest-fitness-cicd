@@ -15,8 +15,9 @@ LEFT, RIGHT, TOP, BOTTOM = 44, 16, 30, 40
 
 
 def line_chart(title: str, points: Sequence[tuple[str, float]], y_max: float = 100.0,
-               unit: str = "%", colour: str = "#d4af37") -> str:
-    """Line chart of (label, value) pairs; values are drawn on a 0..y_max axis."""
+               unit: str = "%", colour: str = "#d4af37", y_min: float = 0.0) -> str:
+    """Line chart of (label, value) pairs on a y_min..y_max axis."""
+    span = (y_max - y_min) or 1.0
     plot_w = WIDTH - LEFT - RIGHT
     plot_h = HEIGHT - TOP - BOTTOM
     parts = [
@@ -27,7 +28,7 @@ def line_chart(title: str, points: Sequence[tuple[str, float]], y_max: float = 1
         f'text-anchor="middle">{escape(title)}</text>',
     ]
     for step in range(0, 5):
-        value = y_max * step / 4
+        value = y_min + span * step / 4
         y = TOP + plot_h - plot_h * step / 4
         parts.append(f'<line x1="{LEFT}" y1="{y:.1f}" x2="{WIDTH - RIGHT}" y2="{y:.1f}" '
                      f'stroke="#333" stroke-width="1"/>')
@@ -42,7 +43,8 @@ def line_chart(title: str, points: Sequence[tuple[str, float]], y_max: float = 1
         coords = []
         for index, (label, value) in enumerate(points):
             x = LEFT + (gap * index if len(points) > 1 else plot_w / 2)
-            y = TOP + plot_h - plot_h * min(max(float(value), 0.0), y_max) / y_max
+            clamped = min(max(float(value), y_min), y_max)
+            y = TOP + plot_h - plot_h * (clamped - y_min) / span
             coords.append((x, y, label, value))
         path = " ".join(f"{x:.1f},{y:.1f}" for x, y, _, _ in coords)
         parts.append(f'<polyline points="{path}" fill="none" stroke="{colour}" stroke-width="2"/>')

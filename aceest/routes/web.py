@@ -8,8 +8,17 @@ from flask import Blueprint, abort, flash, redirect, render_template, request, u
 
 from .. import db
 from ..errors import ACEestError, NotFoundError
-from ..programs import SITE_METRICS, get_program, list_programs
-from ..services import build_profile, current_week, validate_adherence, validate_week
+from ..programs import SITE_METRICS, WORKOUT_TYPES, get_program, list_programs
+from ..services import (
+    build_profile,
+    current_week,
+    describe_client,
+    summarise_adherence,
+    validate_adherence,
+    validate_metrics,
+    validate_week,
+    validate_workout,
+)
 
 web_bp = Blueprint("web", __name__)
 
@@ -21,7 +30,7 @@ def _dashboard(**context: Any) -> str:
         "dashboard.html",
         programs=list_programs(),
         metrics=SITE_METRICS,
-        clients=db.list_clients(),
+        clients=[describe_client(client) for client in db.list_clients()],
         **context,
     )
 
@@ -68,11 +77,17 @@ def save_profile() -> Any:
 def client_detail(name: str) -> Any:
     """The desktop app's "Load Client": profile summary plus weekly progress."""
     client = _client_or_404(name)
+    progress = db.list_progress(client["id"])
+    metrics = db.list_metrics(client["id"])
     return render_template(
         "client.html",
-        client=client,
+        client=describe_client(client),
         program=get_program(client["program"]),
-        progress=db.list_progress(client["id"]),
+        progress=progress,
+        summary=summarise_adherence(progress),
+        last_metrics=metrics[-1] if metrics else None,
+        workouts=db.list_workouts(client["id"]),
+        workout_types=WORKOUT_TYPES,
         week=current_week(),
     )
 
@@ -87,6 +102,33 @@ def save_progress(name: str) -> Any:
             validate_adherence(request.form.get("adherence")),
         )
         flash(f"Week {entry['week']} recorded at {entry['adherence']}%", "success")
+    except ACEestError as error:
+        flash(error.message, "error")
+    return redirect(url_for("web.client_detail", name=client["name"]), code=303)
+
+
+@web_bp.post("/clients/<name>/workouts")
+def save_workout(name: str) -> Any:
+    client = _client_or_404(name)
+    form = request.form.to_dict()
+    exercise = {key: form.pop(f"exercise_{key}", "")
+                for key in ("name", "sets", "reps", "weight_kg")}
+    if exercise["name"]:
+        form["exercises"] = [exercise]
+    try:
+        workout = db.insert_workout(client["id"], validate_workout(form))
+        flash(f"{workout['workout_type']} session on {workout['date']} logged", "success")
+    except ACEestError as error:
+        flash(error.message, "error")
+    return redirect(url_for("web.client_detail", name=client["name"]), code=303)
+
+
+@web_bp.post("/clients/<name>/metrics")
+def save_metrics(name: str) -> Any:
+    client = _client_or_404(name)
+    try:
+        entry = db.insert_metrics(client["id"], validate_metrics(request.form.to_dict()))
+        flash(f"Body metrics for {entry['date']} logged", "success")
     except ACEestError as error:
         flash(error.message, "error")
     return redirect(url_for("web.client_detail", name=client["name"]), code=303)
