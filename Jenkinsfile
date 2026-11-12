@@ -47,6 +47,10 @@ pipeline {
                         script: '''awk -F'"' '/^__version__/ {print $2}' aceest/__init__.py''').trim()
                     env.GIT_SHORT = sh(returnStdout: true, script: 'git rev-parse --short=7 HEAD').trim()
                     env.IMAGE_TAG = "${env.APP_VERSION}-${env.GIT_SHORT}"
+                    // main and its release tag build the same commit at the same time,
+                    // so the throwaway test image is named per build, not per commit
+                    env.TEST_IMAGE = 'aceest-fitness-test:' +
+                        "${env.BRANCH_NAME}-${env.BUILD_NUMBER}".replaceAll('[^A-Za-z0-9_.-]', '-')
                     currentBuild.displayName = "#${env.BUILD_NUMBER} v${env.APP_VERSION}"
                     if (env.TAG_NAME && env.TAG_NAME != "v${env.APP_VERSION}") {
                         error("Tag ${env.TAG_NAME} does not match the application version ${env.APP_VERSION}")
@@ -105,7 +109,7 @@ pipeline {
         stage('Build Image') {
             steps {
                 sh '''
-                    docker build --target test -t "aceest-fitness-test:$IMAGE_TAG" .
+                    docker build --target test -t "$TEST_IMAGE" .
                     docker build --target runtime \
                         --build-arg APP_VERSION="$APP_VERSION" \
                         --build-arg GIT_COMMIT="$GIT_COMMIT" \
@@ -117,7 +121,7 @@ pipeline {
         stage('Test in Container') {
             steps {
                 // the full Pytest suite, inside the image built from this commit
-                sh 'docker run --rm "aceest-fitness-test:$IMAGE_TAG"'
+                sh 'docker run --rm "$TEST_IMAGE"'
                 // and the runtime image: becomes healthy, runs as non-root, reports its version
                 sh '''
                     cid=$(docker run -d -e ACEEST_TRACK=ci "$IMAGE_REPO:$IMAGE_TAG")
@@ -181,7 +185,6 @@ print('runtime image OK:', body)
             when { branch 'main' }
             environment {
                 IMAGE = "${env.IMAGE_REPO}:${env.IMAGE_TAG}"
-                TEST_IMAGE = "aceest-fitness-test:${env.IMAGE_TAG}"
                 INGRESS = "${env.ACEEST_INGRESS ?: 'http://192.168.89.2'}"
                 DOCKER_NETWORK = "${env.ACEEST_DOCKER_NETWORK ?: 'aceest-net'}"
             }
@@ -221,7 +224,7 @@ print('runtime image OK:', body)
             echo "v${env.APP_VERSION} (${env.GIT_SHORT}) failed - nothing was published"
         }
         cleanup {
-            sh 'docker rmi "aceest-fitness-test:$IMAGE_TAG" >/dev/null 2>&1 || true'
+            sh 'docker rmi "$TEST_IMAGE" >/dev/null 2>&1 || true'
             cleanWs()
         }
     }
