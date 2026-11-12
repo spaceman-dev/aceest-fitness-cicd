@@ -44,6 +44,12 @@ docker run -p 5000:5000 aceest-fitness
 | GET, POST | `/api/clients/<name>/workouts` | sessions with exercises |
 | GET, POST | `/api/clients/<name>/metrics` | weight / waist / bodyfat entries |
 | GET | `/api/clients/<name>/metrics/chart.svg` | weight trend chart |
+| GET | `/api/clients/<name>/program?experience=beginner` | weekly program |
+| GET | `/api/clients/<name>/report.pdf` | PDF client report |
+| GET, POST | `/api/users` | staff accounts (Admin only) |
+
+Everything under `/api/clients` and `/api/users` needs a signed-in session or
+HTTP Basic credentials, e.g. `curl -u admin:<password> .../api/clients`.
 
 Every response carries `X-ACEest-Version` and `X-ACEest-Track` headers so it is
 always clear which build answered.
