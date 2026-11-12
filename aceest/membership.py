@@ -1,7 +1,9 @@
-"""Membership plans and renewals (Aceestver-3.2.4 added billing to memberships).
+"""Membership plans and renewals.
 
-A renewal extends the membership from whichever is later - today or the
-current end date - so paying early never loses the remaining days.
+Aceestver-3.2.4 shows a membership status and renewal date per client; here
+the date is driven by recorded payments. A renewal extends the membership
+from whichever is later - today or the current end date - so paying early
+never loses the remaining days.
 """
 
 from __future__ import annotations
