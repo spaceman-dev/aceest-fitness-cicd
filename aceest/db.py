@@ -37,6 +37,14 @@ MIGRATIONS: list[tuple[int, list[str]]] = [
         )
         """,
     ]),
+    (2, [
+        # 2.1.2: one entry per client and week - keep the latest of any duplicates
+        """
+        DELETE FROM progress
+         WHERE id NOT IN (SELECT MAX(id) FROM progress GROUP BY client_id, week)
+        """,
+        "CREATE UNIQUE INDEX IF NOT EXISTS progress_client_week ON progress (client_id, week)",
+    ]),
 ]
 
 
@@ -146,15 +154,20 @@ def update_client(client_id: int, profile: Mapping[str, Any]) -> dict[str, Any]:
 # ----------------------------------------------------------------- progress
 
 
-def insert_progress(client_id: int, week: str, adherence: int) -> dict[str, Any]:
+def save_progress(client_id: int, week: str, adherence: int) -> dict[str, Any]:
+    """Record a week's adherence; logging the same week again replaces it."""
     db = get_db()
-    cursor = db.execute(
-        "INSERT INTO progress (client_id, week, adherence) VALUES (?, ?, ?)",
+    db.execute(
+        """
+        INSERT INTO progress (client_id, week, adherence) VALUES (?, ?, ?)
+        ON CONFLICT (client_id, week)
+        DO UPDATE SET adherence = excluded.adherence, logged_at = datetime('now')
+        """,
         (client_id, week, adherence),
     )
     db.commit()
-    return _one("SELECT * FROM progress WHERE id = ?", (cursor.lastrowid,))
+    return _one("SELECT * FROM progress WHERE client_id = ? AND week = ?", (client_id, week))
 
 
 def list_progress(client_id: int) -> list[dict[str, Any]]:
-    return _all("SELECT * FROM progress WHERE client_id = ? ORDER BY id", (client_id,))
+    return _all("SELECT * FROM progress WHERE client_id = ? ORDER BY week", (client_id,))

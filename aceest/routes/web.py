@@ -81,12 +81,12 @@ def client_detail(name: str) -> Any:
 def save_progress(name: str) -> Any:
     client = _client_or_404(name)
     try:
-        db.insert_progress(
+        entry = db.save_progress(
             client["id"],
             validate_week(request.form.get("week")),
             validate_adherence(request.form.get("adherence")),
         )
-        flash("Weekly progress logged", "success")
+        flash(f"Week {entry['week']} recorded at {entry['adherence']}%", "success")
     except ACEestError as error:
         flash(error.message, "error")
     return redirect(url_for("web.client_detail", name=client["name"]), code=303)

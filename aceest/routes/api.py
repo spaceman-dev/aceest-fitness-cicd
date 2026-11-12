@@ -141,7 +141,7 @@ def get_progress(name: str) -> Any:
 def log_progress(name: str) -> Any:
     client = _client_or_404(name)
     body = _json_body()
-    entry = db.insert_progress(
+    entry = db.save_progress(
         client["id"],
         validate_week(body.get("week")),
         validate_adherence(require(body, "adherence")),
