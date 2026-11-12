@@ -1,0 +1,58 @@
+# Local CI toolchain: Jenkins (build server) + SonarQube (code quality).
+# Both join the existing "aceest-net" network that the registry and the
+# minikube node also sit on, so Jenkins can reach all of them by IP/name.
+#
+#   ./infra/up.sh        # creates the secrets volume and starts both
+#   docker compose -f infra/docker-compose.yml down
+name: aceest-ci
+
+services:
+  sonarqube:
+    image: sonarqube:community
+    container_name: sonarqube
+    restart: unless-stopped
+    environment:
+      # same switch the Jenkins lab uses; fine for a single-node demo server
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+    ports:
+      # host 9000 is often taken (proxy agents, php-fpm); the UI is on :9001
+      - "9001:9000"
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    networks:
+      - aceest-net
+
+  jenkins:
+    build: ./jenkins
+    image: aceest-jenkins:local
+    container_name: aceest-jenkins
+    restart: unless-stopped
+    depends_on:
+      - sonarqube
+    # gid of /var/run/docker.sock inside the docker VM
+    group_add:
+      - "${DOCKER_GID:-991}"
+    environment:
+      ACEEST_REPO_URL: "${ACEEST_REPO_URL:-https://github.com/spaceman-dev/aceest-fitness-cicd.git}"
+      JAVA_OPTS: "-Djenkins.install.runSetupWizard=false ${EXTRA_JAVA_OPTS:-}"
+    ports:
+      - "8090:8080"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - jenkins_secrets:/run/secrets:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - aceest-net
+
+networks:
+  aceest-net:
+    external: true
+
+volumes:
+  jenkins_home:
+  jenkins_secrets:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_logs:
