@@ -5,9 +5,10 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, Response, current_app, jsonify, request
 
 from ..errors import NotFoundError, ValidationError
+from ..exports import clients_to_csv
 from ..programs import SITE_METRICS, get_program, list_programs
 from ..services import (
     build_profile,
@@ -76,3 +77,28 @@ def calories() -> Any:
 def profile() -> Any:
     """Validate a client profile and return it with its calorie estimate."""
     return jsonify(build_profile(_json_body()))
+
+
+def _roster():
+    return current_app.extensions["aceest_roster"]
+
+
+@api_bp.get("/clients")
+def list_clients() -> Any:
+    clients = _roster().all()
+    return jsonify({"clients": clients, "count": len(clients)})
+
+
+@api_bp.post("/clients")
+def add_client() -> Any:
+    client = _roster().add(build_profile(_json_body()))
+    return jsonify(client), 201
+
+
+@api_bp.get("/clients/export.csv")
+def export_clients() -> Any:
+    return Response(
+        clients_to_csv(_roster().all()),
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=aceest_clients.csv"},
+    )

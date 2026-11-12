@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from flask import Blueprint, abort, render_template, request
+from flask import Blueprint, abort, current_app, render_template, request
 
-from ..errors import ValidationError
+from ..errors import ACEestError
 from ..programs import SITE_METRICS, get_program, list_programs
 from ..services import build_profile
 
@@ -17,7 +17,11 @@ def _dashboard(**context: Any) -> str:
     context.setdefault("selected", None)
     context.setdefault("form", {})
     return render_template(
-        "dashboard.html", programs=list_programs(), metrics=SITE_METRICS, **context
+        "dashboard.html",
+        programs=list_programs(),
+        metrics=SITE_METRICS,
+        clients=current_app.extensions["aceest_roster"].all(),
+        **context,
     )
 
 
@@ -36,7 +40,7 @@ def dashboard() -> Any:
 def save_profile() -> Any:
     form = request.form.to_dict()
     try:
-        profile = build_profile(form)
-    except ValidationError as error:
-        return _dashboard(form=form, error=error.message), 400
+        profile = current_app.extensions["aceest_roster"].add(build_profile(form))
+    except ACEestError as error:
+        return _dashboard(form=form, error=error.message), error.status_code
     return _dashboard(form=form, profile=profile, selected=get_program(profile["program"]))

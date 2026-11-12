@@ -11,8 +11,9 @@ from werkzeug.exceptions import HTTPException
 
 from .config import get_config
 from .errors import ACEestError
+from .roster import ClientRoster
 
-__version__ = "1.1.0"
+__version__ = "1.1.2"
 
 csrf = CSRFProtect()
 
@@ -25,6 +26,8 @@ def create_app(config_name: str | None = None,
     if overrides:
         app.config.update(overrides)
     app.json.sort_keys = False
+
+    app.extensions["aceest_roster"] = ClientRoster()
 
     csrf.init_app(app)
     _register_blueprints(app)

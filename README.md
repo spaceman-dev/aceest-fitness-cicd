@@ -35,6 +35,8 @@ docker run -p 5000:5000 aceest-fitness
 | GET | `/api/site` | capacity / area / break-even figures |
 | POST | `/api/calories` | `{"weight_kg", "program"}` -> daily calorie estimate |
 | POST | `/api/profile` | validates a client profile and returns it with calories |
+| GET, POST | `/api/clients` | client roster; POST adds one (409 on a duplicate name) |
+| GET | `/api/clients/export.csv` | roster as CSV |
 
 Every response carries `X-ACEest-Version` and `X-ACEest-Track` headers so it is
 always clear which build answered.

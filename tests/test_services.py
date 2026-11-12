@@ -69,7 +69,7 @@ def test_build_profile_derives_calories(profile_payload):
     profile = services.build_profile(profile_payload)
     assert profile == {
         "name": "Ravi Kumar", "age": 32, "weight_kg": 80.0, "program": "MG",
-        "program_name": "Muscle Gain (MG)", "calories": 2800, "adherence": 85,
+        "program_name": "Muscle Gain (MG)", "calories": 2800, "adherence": 85, "notes": "",
     }
 
 
@@ -89,3 +89,12 @@ def test_build_profile_requires_every_field(profile_payload, missing):
 def test_build_profile_needs_a_mapping():
     with pytest.raises(ValidationError):
         services.build_profile(["not", "a", "dict"])
+
+
+def test_notes_are_trimmed_and_limited():
+    assert services.validate_notes("  knee rehab  ") == "knee rehab"
+    assert services.validate_notes(None) == ""
+    with pytest.raises(ValidationError):
+        services.validate_notes("x" * 281)
+    with pytest.raises(ValidationError):
+        services.validate_notes(42)
