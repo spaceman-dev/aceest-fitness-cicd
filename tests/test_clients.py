@@ -172,7 +172,8 @@ class TestPages:
     def test_client_page_shows_the_profile_block(self, client, enrolled):
         page = client.get("/clients/Ravi Kumar").get_data(as_text=True)
         assert "CLIENT PROFILE" in page
-        assert "Calories : 2800 kcal/day" in page
+        assert "Calories  : 2800 kcal/day" in page
+        assert "Push/Pull/Legs hypertrophy" in page
 
     def test_saving_progress_from_the_page(self, client, enrolled):
         response = client.post("/clients/Ravi Kumar/progress",
