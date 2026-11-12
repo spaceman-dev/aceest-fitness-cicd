@@ -3,6 +3,18 @@
 Versions follow the numbering of the original ACEest desktop builds
 (`Aceestver-X.Y.Z.py`); each one is ported to the Flask app and tagged `vX.Y.Z`.
 
+## 2.1.2
+
+The desktop 2.1.2 build is the same code as 2.0.1; on the web side this
+release fixes what came up after 2.0.1 went live.
+
+- Fixed: logging the same week twice created a second entry. Saving a week
+  now replaces it; migration 2 keeps the latest of existing duplicates and
+  adds a unique index on (client, week).
+- Fixed: weekly progress came back in the order it was typed, not by week.
+- SQLite runs in WAL mode so replicas sharing the file read while one writes.
+- Pipeline: canary traffic is measured only after the new weight is live.
+
 ## 2.0.1
 
 - Clients and weekly progress are stored in SQLite instead of process
