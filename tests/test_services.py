@@ -72,6 +72,7 @@ def test_build_profile_derives_calories(profile_payload):
         "name": "Ravi Kumar", "age": 32, "weight_kg": 80.0, "program": "MG",
         "program_name": "Muscle Gain (MG) - PPL", "calories": 2800, "adherence": 85, "notes": "",
         "height_cm": None, "target_weight_kg": None, "target_adherence": None,
+        "membership_end": None,
     }
 
 

@@ -72,7 +72,7 @@ def test_errors_fault_breaks_the_api_but_not_health(tmp_path):
     client = _faulty(tmp_path, "errors").test_client()
     assert client.get("/api/health").status_code == 200
     assert client.get("/api/programs").status_code == 500
-    assert client.get("/").status_code == 200
+    assert client.get("/login").status_code == 200
 
 
 def test_unknown_fault_is_refused(tmp_path):

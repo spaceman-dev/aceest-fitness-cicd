@@ -13,12 +13,25 @@ os.environ.setdefault("ACEEST_DB", os.path.join(tempfile.mkdtemp(), "aceest.db")
 
 from aceest import create_app  # noqa: E402
 
+ADMIN_PASSWORD = "admin-test-password"
+
 TEST_SETTINGS = {
     "SECRET_KEY": "test-key",
     "TRACK": "test",
+    "ADMIN_PASSWORD": ADMIN_PASSWORD,
     # form tests post without a browser session; test_web covers CSRF itself
     "WTF_CSRF_ENABLED": False,
 }
+
+
+@pytest.fixture()
+def admin_password():
+    return ADMIN_PASSWORD
+
+
+@pytest.fixture()
+def settings():
+    return dict(TEST_SETTINGS)
 
 
 @pytest.fixture()
@@ -27,8 +40,17 @@ def app(tmp_path):
 
 
 @pytest.fixture()
-def client(app):
+def anon_client(app):
     return app.test_client()
+
+
+@pytest.fixture()
+def client(app):
+    """A test client signed in as the seeded Admin."""
+    signed_in = app.test_client()
+    response = signed_in.post("/login", data={"username": "admin", "password": ADMIN_PASSWORD})
+    assert response.status_code == 303
+    return signed_in
 
 
 @pytest.fixture()
