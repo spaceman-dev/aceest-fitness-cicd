@@ -3,6 +3,17 @@
 Versions follow the numbering of the original ACEest desktop builds
 (`Aceestver-X.Y.Z.py`); each one is ported to the Flask app and tagged `vX.Y.Z`.
 
+## 3.2.6
+
+Second patch release from the drills; the app is unchanged.
+
+- Manual rollback of the rolling lane goes to the last revision that did
+  not fail. A plain `rollout undo` after an automatic rollback would have
+  brought back the failed build.
+- A release that fails in the rolling lane marks its ReplicaSet as failed.
+- The rollback job waits until the ingress serves the expected version or
+  slot before reporting success.
+
 ## 3.2.5
 
 No desktop build has this number: it is a patch release for problems found
