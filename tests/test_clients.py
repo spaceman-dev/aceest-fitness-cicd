@@ -94,7 +94,9 @@ class TestClientApi:
         from aceest import create_app
 
         again = create_app("testing", overrides={"DATABASE": app.config["DATABASE"]})
-        assert again.test_client().get("/api/clients/Ravi Kumar").status_code == 200
+        response = again.test_client().get("/api/clients/Ravi Kumar",
+                                           auth=("admin", "admin-test-password"))
+        assert response.status_code == 200
 
 
 class TestProgressApi:

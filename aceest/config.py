@@ -12,6 +12,9 @@ class BaseConfig:
     TRACK = os.environ.get("ACEEST_TRACK", "local")
     # SQLite file; the container points this at the /data volume
     DATABASE = os.environ.get("ACEEST_DB", "aceest_fitness.db")
+    # first Admin account, created only while the users table is empty
+    ADMIN_PASSWORD = os.environ.get("ACEEST_ADMIN_PASSWORD", "")
+    SESSION_COOKIE_SAMESITE = "Lax"
     # rollback drills only: "unhealthy" or "errors" (see aceest/observability.py)
     FAULT = os.environ.get("ACEEST_FAULT", "").strip().lower()
     TESTING = False

@@ -85,10 +85,15 @@ def test_calorie_estimate_matches_the_program_factor():
     assert json.loads(text)["calories"] == 2800
 
 
-def test_client_listing_answers():
-    status, text = call("/api/clients")
+def test_client_data_needs_sign_in():
+    status, _ = call("/api/clients")
+    assert status == 401
+
+
+def test_sign_in_page_is_served():
+    status, text = call("/login")
     assert status == 200
-    assert "count" in json.loads(text)
+    assert "Staff sign in" in text
 
 
 def test_bmi_band():

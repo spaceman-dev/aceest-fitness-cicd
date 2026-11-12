@@ -80,8 +80,8 @@ def test_invalid_profile_is_rejected_with_the_reason(client):
     assert "&#39;weight_kg&#39; must be a number" in response.get_data(as_text=True)
 
 
-def test_form_carries_a_csrf_token(csrf_client):
-    assert 'name="csrf_token"' in csrf_client.get("/").get_data(as_text=True)
+def test_forms_carry_a_csrf_token(csrf_client):
+    assert 'name="csrf_token"' in csrf_client.get("/login").get_data(as_text=True)
 
 
 def test_form_post_without_csrf_token_is_refused(csrf_client):

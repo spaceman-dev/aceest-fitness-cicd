@@ -7,18 +7,24 @@ from collections import Counter
 from collections.abc import Mapping
 from typing import Any
 
-from flask import Blueprint, Response, current_app, jsonify, request
+from datetime import date
+
+from flask import Blueprint, Response, current_app, g, jsonify, request
 
 from .. import db
+from ..auth import admin_required, create_user
 from ..charts import line_chart
 from ..errors import ConflictError, NotFoundError, ValidationError
 from ..exports import clients_to_csv
+from ..generator import generate_program
 from ..programs import SITE_METRICS, WORKOUT_TYPES, get_program, list_programs
+from ..reports import client_report
 from ..services import (
     bmi_report,
     build_profile,
     calculate_calories,
     capacity_used_pct,
+    current_week,
     describe_client,
     require,
     summarise_adherence,
@@ -31,6 +37,19 @@ from ..services import (
 )
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
+
+PROTECTED_PREFIXES = ("/api/clients", "/api/users")
+
+
+@api_bp.before_request
+def require_credentials() -> Any:
+    """Client records are personal data: only signed-in staff may read or change them."""
+    if request.path.startswith(PROTECTED_PREFIXES) and g.get("user") is None:
+        response = jsonify({"error": "Unauthorized",
+                            "message": "sign in or send Basic credentials"})
+        response.headers["WWW-Authenticate"] = 'Basic realm="ACEest"'
+        return response, 401
+    return None
 
 
 def _json_body() -> Mapping[str, Any]:
@@ -228,3 +247,32 @@ def weight_chart(name: str) -> Any:
     svg = line_chart(f"Weight trend - {client['name']}", points, unit=" kg", colour="#e67e22",
                      y_min=max(min(weights) - 5, 0), y_max=max(weights) + 5)
     return Response(svg, mimetype="image/svg+xml")
+
+
+@api_bp.get("/clients/<name>/program")
+def client_program(name: str) -> Any:
+    client = _client_or_404(name)
+    return jsonify(generate_program(client["name"], client["program"],
+                                    request.args.get("experience"), current_week()))
+
+
+@api_bp.get("/clients/<name>/report.pdf")
+def client_pdf(name: str) -> Any:
+    client = _client_or_404(name)
+    pdf = client_report(describe_client(client),
+                        summarise_adherence(db.list_progress(client["id"])),
+                        db.list_workouts(client["id"]), date.today().isoformat())
+    return Response(pdf, mimetype="application/pdf")
+
+
+@api_bp.get("/users")
+@admin_required
+def list_users() -> Any:
+    return jsonify({"users": db.list_users()})
+
+
+@api_bp.post("/users")
+@admin_required
+def add_user() -> Any:
+    body = _json_body()
+    return jsonify(create_user(body.get("username"), body.get("password"), body.get("role"))), 201

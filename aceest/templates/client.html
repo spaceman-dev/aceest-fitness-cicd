@@ -18,6 +18,11 @@ PROGRAM NOTES
 -------------
 {{ client.program_notes }}
 
+MEMBERSHIP
+----------
+Status    : {{ client.membership_status }}{% if client.days_left is not none %} ({{ client.days_left }} days){% endif %}
+Ends      : {{ client.membership_end or '-' }}
+
 GOALS
 -----
 Target weight     : {{ client.target_weight_kg or '-' }} kg
@@ -35,7 +40,10 @@ LAST BODY METRICS
     {% if client.notes %}
       <p class="muted">Coach notes: {{ client.notes }}</p>
     {% endif %}
-    <p><a class="button-link" href="{{ url_for('web.dashboard') }}">&larr; Back to dashboard</a></p>
+    <p class="actions">
+      <a class="button-link" href="{{ url_for('web.dashboard') }}">&larr; Back to dashboard</a>
+      <a class="button-link" href="{{ url_for('web.client_pdf', name=client.name) }}">Export PDF report</a>
+    </p>
   </div>
 
   <div>
@@ -62,6 +70,29 @@ LAST BODY METRICS
       </form>
     </div>
   </div>
+</section>
+
+<section class="card">
+  <h2>Generate program</h2>
+  <form method="get" action="{{ url_for('web.client_detail', name=client.name) }}" class="actions">
+    <label>Experience
+      <select name="experience">
+        {% for level in levels %}<option value="{{ level }}" {% if plan and plan.experience == level %}selected{% endif %}>{{ level|capitalize }}</option>{% endfor %}
+      </select>
+    </label>
+    <button type="submit">Generate</button>
+  </form>
+  {% if plan %}
+    <p class="muted">{{ plan.focus }} focus &middot; {{ plan.days }} days &middot; plan for {{ plan.week }}</p>
+    <table class="roster">
+      <thead><tr><th>Day</th><th>Exercise</th><th>Sets</th><th>Reps</th></tr></thead>
+      <tbody>
+        {% for row in plan.sessions %}
+          <tr><td>{{ row.day }}</td><td>{{ row.exercise }}</td><td>{{ row.sets }}</td><td>{{ row.reps }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
 </section>
 
 <section class="split">
