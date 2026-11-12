@@ -33,6 +33,8 @@ docker run -p 5000:5000 aceest-fitness
 | GET | `/api/programs` | program catalogue |
 | GET | `/api/programs/<code>` | one program (`FL`, `MG`, `BG`) |
 | GET | `/api/site` | capacity / area / break-even figures |
+| POST | `/api/calories` | `{"weight_kg", "program"}` -> daily calorie estimate |
+| POST | `/api/profile` | validates a client profile and returns it with calories |
 
 Every response carries `X-ACEest-Version` and `X-ACEest-Track` headers so it is
 always clear which build answered.
