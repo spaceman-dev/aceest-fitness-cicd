@@ -19,6 +19,14 @@ set_image() {   # set_image <deployment>
   rollout_ok "$1"
 }
 
+answers() {     # answers <host> <path>: HTTP 200 within a few tries
+  for _ in 1 2 3 4 5; do
+    [ "$(curl -s -o /dev/null -m 5 -w '%{http_code}' -H "Host: $1" "$INGRESS$2" || true)" = 200 ] && return 0
+    sleep 1
+  done
+  return 1
+}
+
 case "$STRATEGY" in
   rolling)
     NAMESPACE=aceest-rolling
@@ -31,6 +39,13 @@ case "$STRATEGY" in
     if [ "$live" = blue ]; then standby=green; else standby=blue; fi
     deployment_exists "aceest-$standby" || fail "no standby slot to go back to"
     rollout_ok "aceest-$standby"
+    # a ready pod only proves /api/health; check real requests through the preview host first
+    export ACTIVE_SLOT=$live PREVIEW_SLOT=$standby
+    apply_template "$K8S_DIR/blue-green/services.yaml"
+    for path in /api/health /api/programs; do
+      answers preview.bluegreen.aceest.localhost "$path" ||
+        fail "standby slot $standby does not answer $path - live stays on $live"
+    done
     export ACTIVE_SLOT=$standby PREVIEW_SLOT=$live
     apply_template "$K8S_DIR/blue-green/services.yaml"
     log "live traffic moved $live -> $standby ($(current_image "aceest-$standby"))"

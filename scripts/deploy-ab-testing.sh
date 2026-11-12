@@ -14,11 +14,13 @@ require_release
 
 kc apply -f "$K8S_DIR/ab-testing/services.yaml"
 
-# Last experiment's B becomes the new baseline A; on a first release both match.
+# The last B becomes the new baseline A if its experiment passed; after a
+# failed experiment A stays as it is. On a first release both match.
 current_b=$(current_image aceest-b)
+last_result=$(kc get deployment aceest-b -o jsonpath='{.metadata.annotations.aceest/experiment}' 2>/dev/null || true)
 if [ -z "$current_b" ]; then
   baseline=$IMAGE
-elif [ "$current_b" = "$IMAGE" ]; then
+elif [ "$current_b" = "$IMAGE" ] || [ "$last_result" = failed ]; then
   baseline=$(current_image aceest-a)
 else
   baseline=$current_b
@@ -26,25 +28,31 @@ fi
 log "variant A: $baseline"
 log "variant B: $IMAGE"
 
+b_failed() {   # take B out of the experiment and remember that it failed
+  kc delete -f "$K8S_DIR/ab-testing/ingress-variant-b.yaml" --ignore-not-found
+  kc annotate deployment/aceest-b aceest/experiment=failed --overwrite >/dev/null
+  fail "$1"
+}
+
 (
-  export IMAGE=$baseline VERSION=${baseline##*:} VARIANT=a
+  # variant A is the control group: it never gets the drill fault, only B does
+  export IMAGE=$baseline VERSION=${baseline##*:} VARIANT=a FAULT=""
+  export CHANGE_CAUSE="${BUILD_LABEL:-manual}: baseline ${baseline##*/}"
   apply_template "$K8S_DIR/ab-testing/deployment.yaml"
 )
-rollout_ok aceest-a || fail "variant A never became ready"
+if ! rollout_ok aceest-a; then
+  kc rollout undo deployment/aceest-a
+  fail "variant A never became ready; it was rolled back"
+fi
 
 export VARIANT=b
 apply_template "$K8S_DIR/ab-testing/deployment.yaml"
-if ! rollout_ok aceest-b; then
-  kc delete -f "$K8S_DIR/ab-testing/ingress-variant-b.yaml" --ignore-not-found
-  fail "variant B never became ready; everyone stays on variant A"
-fi
+rollout_ok aceest-b || b_failed "variant B never became ready; everyone stays on variant A"
 old_pods_gone app=aceest,variant=b
 
 kc apply -f "$K8S_DIR/ab-testing/ingress-variant-b.yaml"
-if ! smoke "$HOST" "X-Variant: B"; then
-  kc delete -f "$K8S_DIR/ab-testing/ingress-variant-b.yaml" --ignore-not-found
-  fail "variant B failed its smoke tests; route removed, everyone is on variant A"
-fi
+smoke "$HOST" "X-Variant: B" ||
+  b_failed "variant B failed its smoke tests; route removed, everyone is on variant A"
 sleep 2
 
 # The experiment: plain users, header users and cookie users.
@@ -91,7 +99,7 @@ for seg in ("default", "header_B", "cookie_B"):
 print("A/B routing verified:", json.dumps(r))
 PY
 then
-  kc delete -f "$K8S_DIR/ab-testing/ingress-variant-b.yaml" --ignore-not-found
-  fail "experiment checks failed; variant B route removed, everyone is on variant A"
+  b_failed "experiment checks failed; variant B route removed, everyone is on variant A"
 fi
+kc annotate deployment/aceest-b aceest/experiment=passed --overwrite >/dev/null
 log "done: experiment running - A on $baseline, B on $IMAGE"

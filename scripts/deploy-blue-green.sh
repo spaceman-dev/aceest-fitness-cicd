@@ -12,12 +12,27 @@ require_release
 
 live=$(kc get service aceest -o jsonpath='{.spec.selector.slot}' 2>/dev/null || true)
 if [ "$live" = blue ]; then idle=green; else idle=blue; fi
+standby_image=$(current_image "aceest-$idle")
 log "live slot: ${live:-<none>} -> deploying $APP_VERSION to the $idle slot"
+
+# The idle slot is also the standby that a manual rollback switches to, so a
+# failed release must not leave the broken build running in it.
+restore_idle() {
+  [ -n "$standby_image" ] || return 0
+  log "putting the $idle slot back on $standby_image"
+  (
+    export IMAGE=$standby_image VERSION=${standby_image##*:} FAULT=""
+    export CHANGE_CAUSE="restored after a failed release of $APP_VERSION"
+    apply_template "$K8S_DIR/blue-green/deployment.yaml"
+    rollout_ok "aceest-$idle"
+  ) || log "could not restore the $idle slot - check it before any rollback"
+}
 
 kc apply -f "$K8S_DIR/blue-green/ingress.yaml"
 export SLOT=$idle
 apply_template "$K8S_DIR/blue-green/deployment.yaml"
 if ! rollout_ok "aceest-$idle"; then
+  restore_idle
   fail "the $idle slot never became ready; live traffic is still on ${live:-nothing}"
 fi
 old_pods_gone "app=aceest,slot=$idle"
@@ -26,6 +41,7 @@ old_pods_gone "app=aceest,slot=$idle"
 export ACTIVE_SLOT=${live:-$idle} PREVIEW_SLOT=$idle
 apply_template "$K8S_DIR/blue-green/services.yaml"
 if ! smoke "$PREVIEW_HOST"; then
+  restore_idle
   fail "$APP_VERSION failed on the preview slot; live traffic is still on ${live:-nothing}"
 fi
 
@@ -39,6 +55,7 @@ if ! smoke "$HOST"; then
     export ACTIVE_SLOT=$live PREVIEW_SLOT=$idle
     apply_template "$K8S_DIR/blue-green/services.yaml"
     probe "$HOST"
+    restore_idle
   fi
   fail "$APP_VERSION failed after the switch; traffic is back on ${live:-nothing}"
 fi
