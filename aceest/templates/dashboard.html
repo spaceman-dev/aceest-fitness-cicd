@@ -143,6 +143,26 @@ BREAK-EVEN: {{ metrics.break_even_members }} Members</pre>
 </section>
 
 <section class="card">
+  <h2>Memberships ending in the next 14 days</h2>
+  {% if expiring %}
+    <table class="roster">
+      <thead><tr><th>Client</th><th>Ends</th><th>Days left</th></tr></thead>
+      <tbody>
+        {% for item in expiring %}
+          <tr>
+            <td><a href="{{ url_for('web.client_detail', name=item.name) }}">{{ item.name }}</a></td>
+            <td>{{ item.membership_end }}</td>
+            <td>{{ item.days_left }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="empty">No memberships end in the next two weeks.</p>
+  {% endif %}
+</section>
+
+<section class="card">
   <h2>Program catalogue</h2>
   <div class="grid-programs">
     {% for program in programs %}

@@ -21,6 +21,7 @@ from flask import (
 from .. import db
 from ..errors import ACEestError, NotFoundError
 from ..generator import LEVELS, generate_program
+from ..membership import PAYMENT_METHODS, list_plans, renewal
 from ..reports import client_report
 from ..programs import SITE_METRICS, WORKOUT_TYPES, get_program, list_programs
 from ..services import (
@@ -28,9 +29,11 @@ from ..services import (
     capacity_used_pct,
     current_week,
     describe_client,
+    expiring_soon,
     summarise_adherence,
     validate_adherence,
     validate_metrics,
+    validate_template,
     validate_week,
     validate_workout,
 )
@@ -55,6 +58,7 @@ def _dashboard(**context: Any) -> str:
         metrics=SITE_METRICS,
         clients=clients,
         capacity_pct=capacity_used_pct(len(clients)),
+        expiring=expiring_soon(clients),
         **context,
     )
 
@@ -121,6 +125,9 @@ def client_detail(name: str) -> Any:
         workout_types=WORKOUT_TYPES,
         levels=list(LEVELS),
         plan=plan,
+        plans=list_plans(),
+        methods=PAYMENT_METHODS,
+        payments=db.list_payments(client["id"]),
         week=current_week(),
     )
 
@@ -173,6 +180,33 @@ def save_metrics(name: str) -> Any:
     try:
         entry = db.insert_metrics(client["id"], validate_metrics(request.form.to_dict()))
         flash(f"Body metrics for {entry['date']} logged", "success")
+    except ACEestError as error:
+        flash(error.message, "error")
+    return redirect(url_for("web.client_detail", name=client["name"]), code=303)
+
+
+@web_bp.post("/clients/<name>/membership")
+def renew(name: str) -> Any:
+    client = _client_or_404(name)
+    try:
+        payment = db.record_payment(client["id"],
+                                    renewal(client["membership_end"], request.form.to_dict()),
+                                    g.user["username"])
+        flash(f"Membership renewed until {payment['period_end']} "
+              f"(INR {payment['amount_inr']:,} by {payment['method']})", "success")
+    except ACEestError as error:
+        flash(error.message, "error")
+    return redirect(url_for("web.client_detail", name=client["name"]), code=303)
+
+
+@web_bp.post("/clients/<name>/template")
+def save_template(name: str) -> Any:
+    client = _client_or_404(name)
+    try:
+        template = validate_template(client["program"], request.form.get("template"))
+        db.set_template(client["id"], template)
+        flash(f"Training template set to {template}" if template else "Training template cleared",
+              "success")
     except ACEestError as error:
         flash(error.message, "error")
     return redirect(url_for("web.client_detail", name=client["name"]), code=303)

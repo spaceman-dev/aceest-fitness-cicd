@@ -17,6 +17,7 @@ Calories  : {{ client.calories }} kcal/day
 PROGRAM NOTES
 -------------
 {{ client.program_notes }}
+Template  : {{ client.template or 'not assigned' }}
 
 MEMBERSHIP
 ----------
@@ -69,6 +70,56 @@ LAST BODY METRICS
         <button type="submit">Save Progress</button>
       </form>
     </div>
+  </div>
+</section>
+
+<section class="split">
+  <div class="card">
+    <h2>Membership &amp; billing</h2>
+    <p class="calories">{{ client.membership_status }}{% if client.days_left is not none %} &middot; {{ client.days_left }} days left{% endif %}</p>
+    <p class="muted">Ends: {{ client.membership_end or 'not set' }}</p>
+    <form method="post" action="{{ url_for('web.renew', name=client.name) }}" class="stack">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label>Plan
+        <select name="plan">
+          {% for p in plans %}<option value="{{ p.code }}">{{ p.name }} - {{ p.days }} days - INR {{ "{:,}".format(p.fee_inr) }}</option>{% endfor %}
+        </select>
+      </label>
+      <label>Paid by
+        <select name="method">{% for m in methods %}<option>{{ m }}</option>{% endfor %}</select>
+      </label>
+      <button type="submit">Renew membership</button>
+    </form>
+    {% if payments %}
+      <table class="roster">
+        <thead><tr><th>Paid on</th><th>Plan</th><th>Amount</th><th>Period</th><th>By</th></tr></thead>
+        <tbody>
+          {% for pay in payments %}
+            <tr>
+              <td>{{ pay.paid_on }}</td><td>{{ pay.plan|capitalize }}</td><td>INR {{ "{:,}".format(pay.amount_inr) }} ({{ pay.method }})</td>
+              <td>{{ pay.period_start }} &rarr; {{ pay.period_end }}</td><td>{{ pay.recorded_by }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="empty">No payments recorded yet.</p>
+    {% endif %}
+  </div>
+  <div class="card">
+    <h2>Training template</h2>
+    <form method="post" action="{{ url_for('web.save_template', name=client.name) }}" class="stack">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label>Template for {{ client.program_name }}
+        <select name="template">
+          <option value="">- none -</option>
+          {% for option in client.template_options %}
+            <option {% if client.template == option %}selected{% endif %}>{{ option }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button type="submit">Save template</button>
+    </form>
   </div>
 </section>
 
