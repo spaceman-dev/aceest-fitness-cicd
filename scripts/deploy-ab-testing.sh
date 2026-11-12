@@ -38,6 +38,7 @@ if ! rollout_ok aceest-b; then
   kc delete -f "$K8S_DIR/ab-testing/ingress-variant-b.yaml" --ignore-not-found
   fail "variant B never became ready; everyone stays on variant A"
 fi
+old_pods_gone app=aceest,variant=b
 
 kc apply -f "$K8S_DIR/ab-testing/ingress-variant-b.yaml"
 if ! smoke "$HOST" "X-Variant: B"; then

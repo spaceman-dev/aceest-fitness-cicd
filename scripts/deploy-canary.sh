@@ -19,6 +19,7 @@ if ! deployment_exists aceest-stable; then
   export TRACK=stable REPLICAS=3
   apply_template "$K8S_DIR/canary/deployment.yaml"
   rollout_ok aceest-stable || fail "stable track never became ready"
+  old_pods_gone app=aceest,track=stable
   export WEIGHT=0
   apply_template "$K8S_DIR/canary/ingress-canary.yaml"
   smoke "$HOST" || fail "$APP_VERSION failed its smoke tests"
@@ -41,6 +42,7 @@ log "stable: $stable_image, canary: $IMAGE"
 export TRACK=canary REPLICAS=1
 apply_template "$K8S_DIR/canary/deployment.yaml"
 rollout_ok aceest-canary || abort "canary pod never became ready"
+old_pods_gone app=aceest,track=canary
 
 export WEIGHT=0
 apply_template "$K8S_DIR/canary/ingress-canary.yaml"
@@ -72,6 +74,7 @@ if ! rollout_ok aceest-stable; then
   kc rollout undo deployment/aceest-stable
   abort "stable track failed to roll forward"
 fi
+old_pods_gone app=aceest,track=stable
 
 export WEIGHT=0
 apply_template "$K8S_DIR/canary/ingress-canary.yaml"

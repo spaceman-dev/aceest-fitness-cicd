@@ -14,7 +14,7 @@ log "current: ${previous:-<none>} -> new: $IMAGE"
 kc apply -f "$K8S_DIR/rolling/services.yaml"
 apply_template "$K8S_DIR/rolling/deployment.yaml"
 
-if ! rollout_ok aceest || ! smoke "$HOST"; then
+if ! rollout_ok aceest || ! old_pods_gone app=aceest || ! smoke "$HOST"; then
   if [ -n "$previous" ]; then
     log "rolling back to the previous revision ($previous)"
     kc rollout undo deployment/aceest

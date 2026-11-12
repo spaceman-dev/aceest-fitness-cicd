@@ -7,12 +7,14 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
+from datetime import date
 from typing import Any
 
 from .errors import ValidationError
 from .programs import get_program
 
 NAME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z .'\-]{1,49}$")
+WEEK_PATTERN = re.compile(r"^(\d{4})-W(\d{2})$")
 MIN_AGE, MAX_AGE = 10, 100
 MIN_WEIGHT_KG, MAX_WEIGHT_KG = 25.0, 300.0
 MAX_NOTES_LENGTH = 280
@@ -91,6 +93,21 @@ def validate_notes(value: Any) -> str:
             f"'notes' must be {MAX_NOTES_LENGTH} characters or fewer", field="notes"
         )
     return notes
+
+
+def current_week(today: date | None = None) -> str:
+    """ISO week label, e.g. 2026-W46 (the desktop build used 'Week %U - %Y')."""
+    year, week, _ = (today or date.today()).isocalendar()
+    return f"{year}-W{week:02d}"
+
+
+def validate_week(value: Any) -> str:
+    if value is None or value == "":
+        return current_week()
+    match = WEEK_PATTERN.match(value.strip()) if isinstance(value, str) else None
+    if not match or not 1 <= int(match.group(2)) <= 53:
+        raise ValidationError("'week' must look like 2026-W46", field="week")
+    return value.strip()
 
 
 def calculate_calories(weight_kg: Any, program: Any) -> int:

@@ -9,11 +9,11 @@ from flask import Flask, jsonify, request
 from flask_wtf.csrf import CSRFProtect
 from werkzeug.exceptions import HTTPException
 
+from . import db
 from .config import get_config
 from .errors import ACEestError
-from .roster import ClientRoster
 
-__version__ = "1.1.2"
+__version__ = "2.0.1"
 
 csrf = CSRFProtect()
 
@@ -27,8 +27,7 @@ def create_app(config_name: str | None = None,
         app.config.update(overrides)
     app.json.sort_keys = False
 
-    app.extensions["aceest_roster"] = ClientRoster()
-
+    db.init_app(app)
     csrf.init_app(app)
     _register_blueprints(app)
     _register_error_handlers(app)

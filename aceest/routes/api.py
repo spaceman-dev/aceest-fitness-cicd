@@ -7,14 +7,17 @@ from typing import Any
 
 from flask import Blueprint, Response, current_app, jsonify, request
 
-from ..errors import NotFoundError, ValidationError
+from .. import db
+from ..errors import ConflictError, NotFoundError, ValidationError
 from ..exports import clients_to_csv
 from ..programs import SITE_METRICS, get_program, list_programs
 from ..services import (
     build_profile,
     calculate_calories,
     require,
+    validate_adherence,
     validate_program,
+    validate_week,
     validate_weight_kg,
 )
 
@@ -79,26 +82,68 @@ def profile() -> Any:
     return jsonify(build_profile(_json_body()))
 
 
-def _roster():
-    return current_app.extensions["aceest_roster"]
+def _client_or_404(name: str) -> dict[str, Any]:
+    client = db.find_client(name)
+    if client is None:
+        raise NotFoundError(f"client '{name}' not found")
+    return client
 
 
 @api_bp.get("/clients")
 def list_clients() -> Any:
-    clients = _roster().all()
+    clients = db.list_clients()
     return jsonify({"clients": clients, "count": len(clients)})
 
 
 @api_bp.post("/clients")
 def add_client() -> Any:
-    client = _roster().add(build_profile(_json_body()))
-    return jsonify(client), 201
+    profile = build_profile(_json_body())
+    if db.find_client(profile["name"]) is not None:
+        raise ConflictError(f"client '{profile['name']}' already exists", field="name")
+    return jsonify(db.insert_client(profile)), 201
 
 
 @api_bp.get("/clients/export.csv")
 def export_clients() -> Any:
     return Response(
-        clients_to_csv(_roster().all()),
+        clients_to_csv(db.list_clients()),
         mimetype="text/csv",
         headers={"Content-Disposition": "attachment; filename=aceest_clients.csv"},
     )
+
+
+@api_bp.get("/clients/<name>")
+def get_client(name: str) -> Any:
+    client = _client_or_404(name)
+    client["progress"] = db.list_progress(client["id"])
+    return jsonify(client)
+
+
+@api_bp.put("/clients/<name>")
+def update_client(name: str) -> Any:
+    client = _client_or_404(name)
+    body = dict(_json_body())
+    body.setdefault("name", client["name"])
+    profile = build_profile(body)
+    clash = db.find_client(profile["name"])
+    if clash is not None and clash["id"] != client["id"]:
+        raise ConflictError(f"client '{profile['name']}' already exists", field="name")
+    return jsonify(db.update_client(client["id"], profile))
+
+
+@api_bp.get("/clients/<name>/progress")
+def get_progress(name: str) -> Any:
+    client = _client_or_404(name)
+    return jsonify({"client": client["name"], "entries": db.list_progress(client["id"])})
+
+
+@api_bp.post("/clients/<name>/progress")
+def log_progress(name: str) -> Any:
+    client = _client_or_404(name)
+    body = _json_body()
+    entry = db.insert_progress(
+        client["id"],
+        validate_week(body.get("week")),
+        validate_adherence(require(body, "adherence")),
+    )
+    return jsonify(entry), 201

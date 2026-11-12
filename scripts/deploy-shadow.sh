@@ -27,6 +27,7 @@ if ! rollout_ok aceest-shadow; then
   kc scale deployment/aceest-shadow --replicas=0
   fail "shadow never became ready (users were not affected)"
 fi
+old_pods_gone app=aceest,role=shadow
 sleep 3
 
 marker="mirror-check-${BUILD_LABEL:-manual}-$$"
@@ -54,7 +55,7 @@ fi
 if [ "$live_image" != "$IMAGE" ]; then
   log "shadow run clean - promoting $APP_VERSION to live"
   apply_template "$K8S_DIR/shadow/deployment-live.yaml"
-  if ! rollout_ok aceest-live || ! smoke "$HOST"; then
+  if ! rollout_ok aceest-live || ! old_pods_gone app=aceest,role=live || ! smoke "$HOST"; then
     kc rollout undo deployment/aceest-live
     rollout_ok aceest-live
     fail "promotion failed; live rolled back to $live_image"

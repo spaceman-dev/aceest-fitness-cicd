@@ -48,19 +48,22 @@ def call(path, payload=None):
 
 
 def test_health_reports_the_expected_version():
-    # right after a switch the ingress may still be reloading, so allow it a moment
-    deadline = time.monotonic() + 30
-    while True:
+    # Right after a switch the ingress may still route to the previous version
+    # for a moment, so wait until several answers in a row come from this one.
+    deadline = time.monotonic() + 45
+    in_a_row = 0
+    while in_a_row < 5:
         try:
             status, text = call("/api/health")
-        except OSError as error:  # connection refused/reset or timeout while endpoints settle
+        except OSError as error:  # refused/reset/timeout while endpoints settle
             status, text = 0, str(error)
         body = json.loads(text) if status == 200 else {}
-        if status == 200 and body.get("version", "") == (EXPECTED_VERSION or body.get("version")):
-            break
+        expected = EXPECTED_VERSION or body.get("version")
+        in_a_row = in_a_row + 1 if status == 200 and body.get("version") == expected else 0
         if time.monotonic() > deadline:
             pytest.fail(f"wanted version {EXPECTED_VERSION or 'any'}, got {status}: {text[:200]}")
-        time.sleep(2)
+        if in_a_row < 5:
+            time.sleep(0.5 if in_a_row else 2)
     assert body["status"] == "healthy"
 
 

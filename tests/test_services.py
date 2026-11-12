@@ -98,3 +98,20 @@ def test_notes_are_trimmed_and_limited():
         services.validate_notes("x" * 281)
     with pytest.raises(ValidationError):
         services.validate_notes(42)
+
+
+def test_current_week_is_iso():
+    from datetime import date
+
+    assert services.current_week(date(2026, 11, 12)) == "2026-W46"
+
+
+@pytest.mark.parametrize("week", ["2026-W01", "2026-W53", " 2026-W46 "])
+def test_valid_weeks(week):
+    assert services.validate_week(week) == week.strip()
+
+
+@pytest.mark.parametrize("week", ["2026-W00", "2026-W54", "W46", 46])
+def test_invalid_weeks(week):
+    with pytest.raises(ValidationError):
+        services.validate_week(week)
