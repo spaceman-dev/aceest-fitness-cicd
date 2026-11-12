@@ -96,6 +96,23 @@ MIGRATIONS: list[tuple[int, list[str]]] = [
         """,
         "ALTER TABLE clients ADD COLUMN membership_end TEXT",
     ]),
+    (5, [
+        # 3.2.4: membership payments and the client's training template
+        """
+        CREATE TABLE IF NOT EXISTS payments (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            client_id    INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+            plan         TEXT    NOT NULL,
+            amount_inr   INTEGER NOT NULL,
+            method       TEXT    NOT NULL,
+            period_start TEXT    NOT NULL,
+            period_end   TEXT    NOT NULL,
+            paid_on      TEXT    NOT NULL,
+            recorded_by  TEXT    NOT NULL
+        )
+        """,
+        "ALTER TABLE clients ADD COLUMN template TEXT",
+    ]),
 ]
 
 
@@ -316,3 +333,35 @@ def insert_user(username: str, password_hash: str, role: str) -> dict[str, Any]:
 
 def list_users() -> list[dict[str, Any]]:
     return _all("SELECT id, username, role, created_at FROM users ORDER BY username")
+
+
+# ------------------------------------------------------------- memberships
+
+
+def record_payment(client_id: int, payment: Mapping[str, Any], recorded_by: str) -> dict[str, Any]:
+    """Store the payment and move the membership end date in one transaction."""
+    db = get_db()
+    with db:
+        cursor = db.execute(
+            """
+            INSERT INTO payments (client_id, plan, amount_inr, method, period_start,
+                                  period_end, paid_on, recorded_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (client_id, payment["plan"], payment["amount_inr"], payment["method"],
+             payment["period_start"], payment["period_end"], payment["paid_on"], recorded_by),
+        )
+        db.execute("UPDATE clients SET membership_end = ? WHERE id = ?",
+                   (payment["period_end"], client_id))
+    return _one("SELECT * FROM payments WHERE id = ?", (cursor.lastrowid,))
+
+
+def list_payments(client_id: int) -> list[dict[str, Any]]:
+    return _all("SELECT * FROM payments WHERE client_id = ? ORDER BY paid_on DESC, id DESC",
+                (client_id,))
+
+
+def set_template(client_id: int, template: str | None) -> None:
+    db = get_db()
+    db.execute("UPDATE clients SET template = ? WHERE id = ?", (template, client_id))
+    db.commit()

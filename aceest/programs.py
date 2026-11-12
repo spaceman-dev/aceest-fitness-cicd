@@ -94,6 +94,14 @@ PROGRAMS: dict[str, dict[str, Any]] = {
 
 ALIASES = {"FL": "FL3"}
 
+# Training templates per program (Aceestver-3.2.4's program_templates).
+TEMPLATES: dict[str, tuple[str, ...]] = {
+    "FL3": ("Full Body HIIT", "Circuit Training", "Cardio + Weights"),
+    "FL5": ("Full Body HIIT", "Circuit Training", "Cardio + Weights"),
+    "MG": ("Push/Pull/Legs", "Upper/Lower Split", "Full Body Strength"),
+    "BG": ("Full Body 3x/week", "Light Strength + Mobility"),
+}
+
 WORKOUT_TYPES = ("Strength", "Hypertrophy", "Conditioning", "Mixed", "Mobility")
 
 # Reference figures for the site, shown on the dashboard.
@@ -106,6 +114,11 @@ SITE_METRICS = {
 
 def list_programs() -> list[dict[str, Any]]:
     return list(PROGRAMS.values())
+
+
+def templates_for(code: str) -> tuple[str, ...]:
+    program = get_program(code)
+    return TEMPLATES[program["code"]] if program else ()
 
 
 def get_program(code: Any) -> dict[str, Any] | None:

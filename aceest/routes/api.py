@@ -17,6 +17,7 @@ from ..charts import line_chart
 from ..errors import ConflictError, NotFoundError, ValidationError
 from ..exports import clients_to_csv
 from ..generator import generate_program
+from ..membership import PAYMENT_METHODS, list_plans, renewal
 from ..programs import SITE_METRICS, WORKOUT_TYPES, get_program, list_programs
 from ..reports import client_report
 from ..services import (
@@ -26,11 +27,14 @@ from ..services import (
     capacity_used_pct,
     current_week,
     describe_client,
+    expiring_soon,
+    membership_status,
     require,
     summarise_adherence,
     validate_adherence,
     validate_metrics,
     validate_program,
+    validate_template,
     validate_week,
     validate_weight_kg,
     validate_workout,
@@ -38,7 +42,7 @@ from ..services import (
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
 
-PROTECTED_PREFIXES = ("/api/clients", "/api/users")
+PROTECTED_PREFIXES = ("/api/clients", "/api/users", "/api/memberships")
 
 
 @api_bp.before_request
@@ -276,3 +280,40 @@ def list_users() -> Any:
 def add_user() -> Any:
     body = _json_body()
     return jsonify(create_user(body.get("username"), body.get("password"), body.get("role"))), 201
+
+
+@api_bp.get("/membership/plans")
+def membership_plans() -> Any:
+    return jsonify({"plans": list_plans(), "methods": list(PAYMENT_METHODS)})
+
+
+@api_bp.get("/memberships/expiring")
+def memberships_expiring() -> Any:
+    return jsonify({"clients": expiring_soon(db.list_clients())})
+
+
+@api_bp.get("/clients/<name>/membership")
+def client_membership(name: str) -> Any:
+    client = _client_or_404(name)
+    return jsonify({
+        "client": client["name"],
+        "membership_end": client["membership_end"],
+        **membership_status(client["membership_end"]),
+        "payments": db.list_payments(client["id"]),
+    })
+
+
+@api_bp.post("/clients/<name>/membership/renew")
+def renew_membership(name: str) -> Any:
+    client = _client_or_404(name)
+    payment = db.record_payment(client["id"], renewal(client["membership_end"], _json_body()),
+                                g.user["username"])
+    return jsonify({"payment": payment, **membership_status(payment["period_end"])}), 201
+
+
+@api_bp.put("/clients/<name>/template")
+def assign_template(name: str) -> Any:
+    client = _client_or_404(name)
+    template = validate_template(client["program"], _json_body().get("template"))
+    db.set_template(client["id"], template)
+    return jsonify({"client": client["name"], "template": template})
