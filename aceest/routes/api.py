@@ -8,6 +8,7 @@ from typing import Any
 from flask import Blueprint, Response, current_app, jsonify, request
 
 from .. import db
+from ..charts import line_chart
 from ..errors import ConflictError, NotFoundError, ValidationError
 from ..exports import clients_to_csv
 from ..programs import SITE_METRICS, get_program, list_programs
@@ -147,3 +148,11 @@ def log_progress(name: str) -> Any:
         validate_adherence(require(body, "adherence")),
     )
     return jsonify(entry), 201
+
+
+@api_bp.get("/clients/<name>/progress/chart.svg")
+def progress_chart(name: str) -> Any:
+    client = _client_or_404(name)
+    points = [(entry["week"], entry["adherence"]) for entry in db.list_progress(client["id"])]
+    svg = line_chart(f"Weekly adherence - {client['name']}", points)
+    return Response(svg, mimetype="image/svg+xml")

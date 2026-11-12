@@ -34,6 +34,11 @@ Calories : {{ client.calories }} kcal/day</pre>
 </section>
 
 <section class="card">
+  <h2>Adherence chart</h2>
+  <img class="chart" src="{{ url_for('api.progress_chart', name=client.name) }}" alt="Weekly adherence chart for {{ client.name }}">
+</section>
+
+<section class="card">
   <h2>Weekly progress</h2>
   {% if progress %}
     <table class="roster">
