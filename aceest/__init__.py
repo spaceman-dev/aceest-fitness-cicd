@@ -13,7 +13,7 @@ from . import db
 from .config import get_config
 from .errors import ACEestError
 
-__version__ = "2.2.1"
+__version__ = "2.2.4"
 
 csrf = CSRFProtect()
 

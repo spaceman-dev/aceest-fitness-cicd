@@ -31,15 +31,19 @@ docker run -p 5000:5000 aceest-fitness
 | --- | --- | --- |
 | GET | `/api/health` | status, version and deployment track |
 | GET | `/api/programs` | program catalogue |
-| GET | `/api/programs/<code>` | one program (`FL`, `MG`, `BG`) |
+| GET | `/api/programs/<code>` | one program (`FL3`, `FL5`, `MG`, `BG`) |
 | GET | `/api/site` | capacity / area / break-even figures |
 | POST | `/api/calories` | `{"weight_kg", "program"}` -> daily calorie estimate |
 | POST | `/api/profile` | validates a client profile and returns it with calories |
+| POST | `/api/bmi` | `{"weight_kg", "height_cm"}` -> BMI, band and risk note |
 | GET, POST | `/api/clients` | client roster; POST adds one (409 on a duplicate name) |
 | GET | `/api/clients/export.csv` | roster as CSV |
 | GET, PUT | `/api/clients/<name>` | one client with progress; PUT updates and recomputes |
 | GET, POST | `/api/clients/<name>/progress` | weekly adherence (`{"week": "2026-W46", "adherence": 80}`) |
 | GET | `/api/clients/<name>/progress/chart.svg` | adherence chart |
+| GET, POST | `/api/clients/<name>/workouts` | sessions with exercises |
+| GET, POST | `/api/clients/<name>/metrics` | weight / waist / bodyfat entries |
+| GET | `/api/clients/<name>/metrics/chart.svg` | weight trend chart |
 
 Every response carries `X-ACEest-Version` and `X-ACEest-Track` headers so it is
 always clear which build answered.
