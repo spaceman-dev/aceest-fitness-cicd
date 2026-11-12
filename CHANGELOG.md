@@ -3,6 +3,17 @@
 Versions follow the numbering of the original ACEest desktop builds
 (`Aceestver-X.Y.Z.py`); each one is ported to the Flask app and tagged `vX.Y.Z`.
 
+## 2.2.4
+
+- Four programs: Fat Loss 3-day (FL3, 22 kcal/kg), Fat Loss 5-day (FL5, 24),
+  Muscle Gain PPL (MG, 35), Beginner (BG, 26). `FL` still resolves to FL3.
+- Height, BMI band and risk note; target weight and target adherence.
+- Workout logging with exercises (sets, reps, weight) and workout history.
+- Body metrics (weight, waist, bodyfat) with a weight-trend chart.
+- Client summary block as in the desktop build: program notes, goals,
+  progress summary and last body metrics.
+- Migration 3 is additive (and maps FL -> FL3), so data is carried over.
+
 ## 2.2.1
 
 - Weekly adherence line chart on the client page, drawn server-side as SVG
