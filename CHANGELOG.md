@@ -3,6 +3,11 @@
 Versions follow the numbering of the original ACEest desktop builds
 (`Aceestver-X.Y.Z.py`); each one is ported to the Flask app and tagged `vX.Y.Z`.
 
+## 2.2.1
+
+- Weekly adherence line chart on the client page, drawn server-side as SVG
+  (`GET /api/clients/<name>/progress/chart.svg`).
+
 ## 2.1.2
 
 The desktop 2.1.2 build is the same code as 2.0.1; on the web side this
