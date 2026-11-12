@@ -102,6 +102,19 @@ infra/up.sh                  # Jenkins on :8090, SonarQube on :9001
 Secrets (Jenkins admin password, SonarQube token, kubeconfig) are read from
 `~/.aceest-ci/secrets`; nothing sensitive is committed.
 
+Images go to the local registry `192.168.89.10:5000/aceest-fitness`
+(`localhost:5005` from the host). To publish to Docker Hub instead, put an
+access token in `~/.aceest-ci/secrets/REGISTRY_PASSWORD` and restart Jenkins
+with
+
+```bash
+REGISTRY_USER=<user> ACEEST_IMAGE_REPO=<user>/aceest-fitness \
+ACEEST_REGISTRY_CREDENTIALS=registry infra/up.sh
+```
+
+Tags already in the local registry can be copied across with
+`docker login && scripts/mirror-images.sh <user>/aceest-fitness`.
+
 ## Versioning
 
 Semantic versions (`MAJOR.MINOR.PATCH`) live in `aceest/__init__.py`. Each
