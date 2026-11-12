@@ -36,6 +36,10 @@ services:
       - "${DOCKER_GID:-991}"
     environment:
       ACEEST_REPO_URL: "${ACEEST_REPO_URL:-https://github.com/spaceman-dev/aceest-fitness-cicd.git}"
+      # local registry by default; for Docker Hub see README "Local toolchain"
+      ACEEST_IMAGE_REPO: "${ACEEST_IMAGE_REPO:-192.168.89.10:5000/aceest-fitness}"
+      ACEEST_REGISTRY_CREDENTIALS: "${ACEEST_REGISTRY_CREDENTIALS:-}"
+      REGISTRY_USER: "${REGISTRY_USER:-}"
       JAVA_OPTS: "-Djenkins.install.runSetupWizard=false ${EXTRA_JAVA_OPTS:-}"
     ports:
       - "8090:8080"
