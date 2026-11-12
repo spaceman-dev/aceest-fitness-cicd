@@ -111,9 +111,9 @@ table.roster a { color: var(--gold); text-decoration: none; }
 
 .summary { list-style: none; padding: 0; font-size: 0.9rem; }
 .bars { list-style: none; padding: 0; }
-.bars li { display: grid; grid-template-columns: 3rem 1fr 3rem; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; font-size: 0.8rem; }
+.bars li { display: grid; grid-template-columns: 8rem 1fr 3rem; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; font-size: 0.8rem; }
 .bar { background: var(--surface-2); border-radius: 4px; height: 10px; overflow: hidden; }
-.bar-fill { display: block; height: 100%; background: var(--ok); }
+.bar-fill { display: block; height: 100%; background: var(--gold); }
 
 .flash-stack { list-style: none; padding: 0; margin: 0 0 1.25rem; }
 .flash { padding: 0.65rem 1rem; border-radius: 6px; margin-bottom: 0.5rem; font-size: 0.9rem; }
