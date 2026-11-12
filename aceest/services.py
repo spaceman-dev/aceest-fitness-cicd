@@ -15,6 +15,7 @@ from .programs import get_program
 NAME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z .'\-]{1,49}$")
 MIN_AGE, MAX_AGE = 10, 100
 MIN_WEIGHT_KG, MAX_WEIGHT_KG = 25.0, 300.0
+MAX_NOTES_LENGTH = 280
 
 
 def require(payload: Mapping[str, Any], field: str) -> Any:
@@ -79,6 +80,19 @@ def validate_adherence(value: Any) -> int:
     return adherence
 
 
+def validate_notes(value: Any) -> str:
+    if value is None:
+        return ""
+    if not isinstance(value, str):
+        raise ValidationError("'notes' must be text", field="notes")
+    notes = value.strip()
+    if len(notes) > MAX_NOTES_LENGTH:
+        raise ValidationError(
+            f"'notes' must be {MAX_NOTES_LENGTH} characters or fewer", field="notes"
+        )
+    return notes
+
+
 def calculate_calories(weight_kg: Any, program: Any) -> int:
     """Daily calorie estimate: body weight (kg) x the program's calorie factor."""
     weight = validate_weight_kg(weight_kg)
@@ -100,4 +114,5 @@ def build_profile(payload: Mapping[str, Any]) -> dict[str, Any]:
         "program_name": program["name"],
         "calories": int(weight * program["calorie_factor"]),
         "adherence": validate_adherence(adherence) if adherence not in (None, "") else 0,
+        "notes": validate_notes(payload.get("notes")),
     }

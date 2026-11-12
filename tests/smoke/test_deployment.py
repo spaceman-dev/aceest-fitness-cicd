@@ -80,3 +80,9 @@ def test_calorie_estimate_matches_the_program_factor():
     status, text = call("/api/calories", {"weight_kg": 80, "program": "MG"})
     assert status == 200
     assert json.loads(text)["calories"] == 2800
+
+
+def test_client_listing_answers():
+    status, text = call("/api/clients")
+    assert status == 200
+    assert "count" in json.loads(text)
