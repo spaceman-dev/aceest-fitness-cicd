@@ -78,19 +78,7 @@ jobs:
               }
             }
             buildStrategies {
-              // The scan below only builds a branch the first time it shows up;
-              // new commits on a known branch are picked up by pollSCM in the
-              // Jenkinsfile. With both triggering, one push was built twice.
-              buildAllBranches {
-                strategies {
-                  buildRegularBranches()
-                  buildNoneBranches {
-                    strategies {
-                      skipInitialBuildOnFirstBranchIndexing()
-                    }
-                  }
-                }
-              }
+              buildRegularBranches()
               buildTags {
                 atLeastDays('-1')
                 atMostDays('7')
@@ -104,7 +92,9 @@ jobs:
           }
         }
         triggers {
-          // discovers new branches and tags (GitHub cannot reach this laptop for webhooks)
+          // This scan is the poll: every 2 minutes it checks GitHub and builds
+          // new commits, new branches and new tags (GitHub cannot reach this
+          // laptop, so no webhooks). pollSCM on top of it built pushes twice.
           periodicFolderTrigger {
             interval('2m')
           }
