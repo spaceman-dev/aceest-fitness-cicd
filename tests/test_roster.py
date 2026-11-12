@@ -5,6 +5,9 @@ from __future__ import annotations
 import csv
 import io
 
+import pytest
+
+from aceest.errors import ConflictError
 from aceest.exports import CSV_COLUMNS, clients_to_csv
 from aceest.roster import ClientRoster
 
@@ -15,6 +18,29 @@ def test_roster_returns_copies():
     roster.all()[0]["name"] = "changed"
     assert roster.all()[0]["name"] == "Ravi"
     assert len(roster) == 1
+
+
+def test_roster_rejects_a_second_client_with_the_same_name():
+    roster = ClientRoster()
+    roster.add({"name": "Ravi Kumar"})
+    with pytest.raises(ConflictError):
+        roster.add({"name": "ravi kumar"})
+
+
+def test_duplicate_client_is_a_409(client, profile_payload):
+    assert client.post("/api/clients", json=profile_payload).status_code == 201
+    response = client.post("/api/clients", json=profile_payload)
+    assert response.status_code == 409
+    assert response.get_json()["field"] == "name"
+    assert client.get("/api/clients").get_json()["count"] == 1
+
+
+def test_duplicate_from_the_dashboard_shows_the_reason(client):
+    form = {"name": "Meera Nair", "age": "28", "weight_kg": "58", "program": "FL"}
+    client.post("/profile", data=form)
+    response = client.post("/profile", data=form)
+    assert response.status_code == 409
+    assert "already exists" in response.get_data(as_text=True)
 
 
 def test_csv_has_the_desktop_columns_and_one_row_per_client(profile_payload, client):

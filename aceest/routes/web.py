@@ -6,7 +6,7 @@ from typing import Any
 
 from flask import Blueprint, abort, current_app, render_template, request
 
-from ..errors import ValidationError
+from ..errors import ACEestError
 from ..programs import SITE_METRICS, get_program, list_programs
 from ..services import build_profile
 
@@ -41,6 +41,6 @@ def save_profile() -> Any:
     form = request.form.to_dict()
     try:
         profile = current_app.extensions["aceest_roster"].add(build_profile(form))
-    except ValidationError as error:
-        return _dashboard(form=form, error=error.message), 400
+    except ACEestError as error:
+        return _dashboard(form=form, error=error.message), error.status_code
     return _dashboard(form=form, profile=profile, selected=get_program(profile["program"]))

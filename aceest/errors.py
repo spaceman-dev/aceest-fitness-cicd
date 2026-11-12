@@ -24,3 +24,7 @@ class ValidationError(ACEestError):
 
 class NotFoundError(ACEestError):
     status_code = 404
+
+
+class ConflictError(ACEestError):
+    status_code = 409

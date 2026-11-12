@@ -10,6 +10,8 @@ import threading
 from collections.abc import Mapping
 from typing import Any
 
+from .errors import ConflictError
+
 
 class ClientRoster:
     def __init__(self) -> None:
@@ -19,6 +21,8 @@ class ClientRoster:
     def add(self, profile: Mapping[str, Any]) -> dict[str, Any]:
         client = dict(profile)
         with self._lock:
+            if any(c["name"].casefold() == client["name"].casefold() for c in self._clients):
+                raise ConflictError(f"client '{client['name']}' already exists", field="name")
             self._clients.append(client)
         return dict(client)
 
