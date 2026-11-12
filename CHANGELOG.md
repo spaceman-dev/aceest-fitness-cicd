@@ -3,6 +3,25 @@
 Versions follow the numbering of the original ACEest desktop builds
 (`Aceestver-X.Y.Z.py`); each one is ported to the Flask app and tagged `vX.Y.Z`.
 
+## 3.2.5
+
+No desktop build has this number: it is a patch release for problems found
+in the rollback drills and while running the pipeline. The app itself is
+unchanged.
+
+- Blue-green: a failed release puts the idle slot back on its previous
+  image. That slot is the standby a manual rollback switches to, and the
+  rollback now checks the standby answers real requests before switching.
+- A/B: variant A (the control group) no longer receives the drill fault,
+  and the B of a failed experiment is not promoted to baseline A on the
+  next release.
+- Jenkins: the multibranch scan is the only build trigger; `pollSCM` on top
+  of it built some pushes twice.
+- Jenkins: Docker Hub login fixed. The registry can be switched by
+  configuration, and `scripts/mirror-images.sh` copies the existing tags.
+- Jenkins and SonarQube have fixed addresses on `aceest-net`, so after a
+  restart they cannot take the minikube node's IP.
+
 ## 3.2.4
 
 - Membership plans (Monthly 30 days / Rs 2500, Quarterly 90 / Rs 6500,

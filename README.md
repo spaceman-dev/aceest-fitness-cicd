@@ -90,7 +90,9 @@ URL through the ingress (port 8088 on the host):
 entry point. The scripts in `scripts/` do the work and revert automatically
 when a rollout or its smoke tests fail; the `ACEest Rollback` Jenkins job
 (`Jenkinsfile.rollback`) is the manual route back. A rollback drill is one
-click: run main with `FAULT_INJECTION=unhealthy` or `errors`.
+click: run main with `FAULT_INJECTION=unhealthy` (new pods never become
+ready) or `errors` (pods look healthy but the API answers 500, which only the
+smoke tests and the canary/shadow checks catch).
 
 ## Local toolchain
 
